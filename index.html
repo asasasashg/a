@@ -212,11 +212,23 @@ input{font:inherit;color:var(--fg)}
 #olToggle{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:78px;z-index:16;display:none}
 
 /* district card */
-#dcard{position:absolute;right:max(256px,calc(env(safe-area-inset-right,0px) + 256px));top:78px;width:250px;z-index:16;border-radius:4px;padding:12px;transform:translateY(-8px);opacity:0;pointer-events:none;transition:transform .45s var(--ease),opacity .35s}
+#dcard{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:78px;width:250px;max-height:calc(100% - 200px);overflow-y:auto;touch-action:pan-y;z-index:16;border-radius:4px;padding:12px;transform:translateY(-8px);opacity:0;pointer-events:none;transition:transform .45s var(--ease),opacity .35s}
 #dcard.open{transform:none;opacity:1;pointer-events:auto}
+#dcard .x{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:3px;color:var(--muted);font-size:15px}
+#dcard .x:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+#zoom{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:12px;z-index:26;display:flex;flex-direction:column;border-radius:4px;overflow:hidden}
+#zoom button{width:42px;height:40px;display:grid;place-items:center;color:var(--brass);font-size:22px;font-weight:600;line-height:1;transition:background .25s,color .25s}
+#zoom button+button{border-top:1px solid rgba(230,192,122,.25)}
+#zoom button:hover{background:rgba(230,192,122,.14);color:var(--fg)}
+#zoom button:active{background:rgba(230,192,122,.28)}
+#zoom svg{width:18px;height:18px}
+#app.popen #ceoBadge{display:none}
+#app.popen #panel{bottom:84px}
+#app.short.popen #panel{bottom:64px}
+#app.w1100.popen #alerts{display:none}
 #dcard h3{margin:2px 0 2px;font-family:var(--f-display);font-size:19px}
 
-#toasts{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:12px;display:flex;flex-direction:column-reverse;gap:6px;z-index:25;width:290px;pointer-events:none}
+#toasts{position:absolute;right:max(62px,calc(env(safe-area-inset-right,0px) + 62px));bottom:12px;display:flex;flex-direction:column-reverse;gap:6px;z-index:25;width:290px;pointer-events:none}
 .toast{padding:9px 12px;border-radius:3px;font-size:12.5px;line-height:1.4;background:rgba(12,17,36,.95);border:1px solid rgba(151,160,198,.25);border-left:3px solid var(--brass);box-shadow:0 10px 24px rgba(0,0,0,.4);animation:tin .6s var(--ease) both;transition:opacity .5s,transform .5s var(--ease)}
 .toast.good{border-left-color:var(--teal)} .toast.bad{border-left-color:var(--coral)}
 .toast.out{opacity:0;transform:translateX(30px)}
@@ -271,13 +283,13 @@ select{width:100%;padding:7px 8px;background:rgba(0,0,0,.35);border:1px solid rg
 
 /* compact (phone landscape) — classes set from the app's own size so they hold when rotated */
 #app.short #topbar{height:40px} #app.short #ticker{top:40px;height:19px;font-size:10.5px}
-#app.short #panel{top:66px;bottom:72px} #app.short #outliner,#app.short #dcard,#app.short #olToggle{top:66px} #app.short #alerts{top:64px}
+#app.short #panel{top:66px;bottom:72px} #app.short #zoom button{width:36px;height:32px;font-size:19px} #app.short #toasts{right:54px;width:230px} #app.short .toast{padding:6px 9px;font-size:11.5px} #app.short #dcard{max-height:calc(100% - 190px)} #app.short #outliner,#app.short #dcard,#app.short #olToggle{top:66px} #app.short #alerts{top:64px}
 #app.short .navb{width:44px;height:42px} #app.short .navb span{display:none} #app.short .navb svg{width:19px;height:19px}
-#app.short #ceoBadge .frame{width:62px} #app.short #ceoBadge .nm{display:none}
+#app.short #ceoBadge .frame{width:62px!important} #app.short #ceoBadge .nm{display:none}
 #app.short .chip .k{display:none} #app.short .chip{padding:3px 6px}
 #app.short .ev-body{grid-template-columns:96px 1fr} #app.short .ev-title{font-size:18px;padding:8px}
-#app.w1100 #outliner{display:none} #app.w1100 #outliner.force{display:block} #app.w1100 #olToggle{display:grid} #app.w1100 #dcard{right:max(50px,env(safe-area-inset-right,0px))}
-#app.w900 .chip.opt{display:none} #app.w900 .coname{max-width:110px} #app.w900 .cosub{display:none} #app.w900 .date{min-width:0;font-size:12px}
+#app.w1100 #olToggle{display:grid} #app.w1100 #outliner{top:118px;max-height:calc(100% - 240px)} #app.short.w1100 #outliner{top:104px;max-height:calc(100% - 180px)}
+#app.w1100 .chip.opt{display:none} #app.w1100 #res{justify-content:flex-start} #app.w900 .coname{max-width:110px} #app.w900 .cosub{display:none} #app.w900 .date{min-width:0;font-size:12px}
 #app.w700 .st-left{display:none} #app.w700 #start{grid-template-columns:1fr} #app.w700 #alerts{display:none}
 #app.rot #panelBody,#app.rot #outliner,#app.rot .st-right,#app.rot .ev-body{touch-action:pan-x pan-y}
 @media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important} }
@@ -308,6 +320,7 @@ select{width:100%;padding:7px 8px;background:rgba(0,0,0,.35);border:1px solid rg
   <div id="dcard" class="deco"></div>
   <div id="dock"><div id="ceoBadge" data-act="char" data-id=""></div><nav id="nav" class="deco"></nav></div>
   <div id="toasts"></div>
+  <div id="zoom" class="deco"><button data-act="zoom" data-v="in" aria-label="Zoom in" title="Zoom in">+</button><button data-act="zoom" data-v="out" aria-label="Zoom out" title="Zoom out">−</button><button data-act="zoom" data-v="home" aria-label="Show whole city" title="Show whole city"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15"/></svg></button></div>
   <div id="modal" hidden></div>
   <div id="start"></div>
 </div>
@@ -678,9 +691,12 @@ let lastScale=0;
 function scaleMarkers(force){const k=clamp(VB.w/760,.55,1.5);if(!force&&Math.abs(k-lastScale)<.02)return;lastScale=k;document.querySelectorAll('#gMarkers .mk').forEach(m=>m.setAttribute('transform',`scale(${k.toFixed(3)})`));const fs=document.querySelectorAll('#gLabels .dlabel');const op=VB.w>900?.0:VB.w>700?.75:1;fs.forEach(t=>t.style.opacity=op)}
 function paintDistricts(){computeOwners();document.querySelectorAll('.dist').forEach(p=>{const o=owners[p.dataset.d];if(o){p.style.fill=colorOf(o);p.style.fillOpacity=o==='you'?.62:.5}else{p.style.fill='#2a3666';p.style.fillOpacity=1}p.classList.toggle('sel',UI.sel===p.dataset.d)})}
 function fitVB(){VB.h=VB.w*appH/appW;svg.setAttribute('viewBox',`${VB.x.toFixed(2)} ${VB.y.toFixed(2)} ${VB.w.toFixed(2)} ${VB.h.toFixed(2)}`)}
-function flyTo(x,y,w){VT.w=clamp(w??VT.w,180,1300);const h=VT.w*appH/appW;VT.x=x-VT.w/2;VT.y=y-h/2}
+function clampVT(){const h=VT.w*appH/appW;const fit=(v,lo,hi,size)=>hi-size<lo?(lo+hi-size)/2:clamp(v,lo,hi-size);VT.x=fit(VT.x,120,1040,VT.w);VT.y=fit(VT.y,20,820,h)}
+function zoomBy(f){const h=VT.w*appH/appW;const cx=VT.x+VT.w/2,cy=VT.y+h/2;flyTo(cx,cy,VT.w*f)}
+function zoomHome(){flyTo(600,420,Math.max(760,660*appW/appH))}
+function flyTo(x,y,w){VT.w=clamp(w??VT.w,180,1300);const h=VT.w*appH/appW;VT.x=x-VT.w/2;VT.y=y-h/2;clampVT()}
 function animMap(dt,now){
- const t=1-Math.pow(.0015,dt/1000);
+ clampVT();const t=1-Math.pow(.0015,dt/1000);
  const nw=lerp(VB.w,VT.w,t);VB.x=lerp(VB.x,VT.x,t);VB.y=lerp(VB.y,VT.y,t);VB.w=nw;fitVB();scaleMarkers();
  const tt=now/1000;
  document.querySelectorAll('#gLights circle').forEach(c=>{const b=BRIDGES[c.dataset.b];const f=(tt*.12+ +c.dataset.o)%1;const dir=+c.dataset.b%2?f:1-f;c.setAttribute('cx',lerp(b[0][0],b[1][0],dir));c.setAttribute('cy',lerp(b[0][1],b[1][1],dir))});
@@ -698,11 +714,11 @@ svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId);ptrs.s
 svg.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,local(e));
  if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];const m=toMap(mid);const nw=clamp(pinch.w*pinch.d/d,180,1300);zoomAround(m,mid,nw,true);return}
  if(!drag)return;const l=local(e);const dx=l[0]-drag.start[0],dy=l[1]-drag.start[1];if(Math.hypot(dx,dy)>5){drag.moved=true;svg.classList.add('drag')}
- if(drag.moved){VT.x=drag.vx-dx*VB.w/appW;VT.y=drag.vy-dy*VB.h/appH;VB.x=VT.x;VB.y=VT.y}});
+ if(drag.moved){VT.x=drag.vx-dx*VB.w/appW;VT.y=drag.vy-dy*VB.h/appH;clampVT();VB.x=VT.x;VB.y=VT.y}});
 const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(drag&&!drag.moved&&ptrs.size===0){const t=document.elementFromPoint(e.clientX,e.clientY);const m=t&&t.closest('[data-act]');if(m)handleAct(m);else{const d=t&&t.closest('.dist');if(d)selectDistrict(d.dataset.d);else selectDistrict(null)}}if(ptrs.size===0){drag=null;svg.classList.remove('drag')}};
 svg.addEventListener('pointerup',endPtr);svg.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);drag=null;pinch=null;svg.classList.remove('drag')});
-svg.addEventListener('wheel',e=>{e.preventDefault();const l=local(e);const m=toMap(l);const nw=clamp(VT.w*Math.pow(1.0018,e.deltaY),180,1300);zoomAround(m,l,nw)},{passive:false});
-function zoomAround(m,l,nw,instant){VT.w=nw;const nh=nw*appH/appW;VT.x=m[0]-l[0]*nw/appW;VT.y=m[1]-l[1]*nh/appH;if(instant){VB.w=VT.w;VB.x=VT.x;VB.y=VT.y}}
+svg.addEventListener('wheel',e=>{e.preventDefault();const l=local(e);const m=toMap(l);const nw=clamp(VT.w*Math.pow(e.ctrlKey?1.01:1.0015,clamp(e.deltaY,-120,120)),180,1300);zoomAround(m,l,nw)},{passive:false});
+function zoomAround(m,l,nw,instant){VT.w=nw;const nh=nw*appH/appW;VT.x=m[0]-l[0]*nw/appW;VT.y=m[1]-l[1]*nh/appH;clampVT();if(instant){VB.w=VT.w;VB.x=VT.x;VB.y=VT.y}}
 
 /* ============ orientation ============ */
 let rotPref='auto';try{rotPref=localStorage.getItem('md_rot')||'auto'}catch(e){}
@@ -715,7 +731,7 @@ function applyOrientation(){
  app.classList.toggle('short',appH<=520);app.classList.toggle('w1100',appW<1100);app.classList.toggle('w900',appW<900);app.classList.toggle('w700',appW<700);document.querySelector('#rotBtn').style.color=rotPref==='auto'?'':'var(--teal)';
  VT.h=VT.w*appH/appW;fitVB();
 }
-addEventListener('resize',applyOrientation);
+addEventListener('resize',()=>{applyOrientation();layoutFloats()});
 function cycleRot(){rotPref=rotPref==='auto'?(rot?'off':'on'):'auto';try{localStorage.setItem('md_rot',rotPref)}catch(e){}applyOrientation();toast(rotPref==='auto'?'Screen follows device: sideways whenever held upright.':rotPref==='on'?'Screen locked sideways.':'Sideways rotation off.')}
 
 /* ============ top bar / tweens ============ */
@@ -765,8 +781,9 @@ function renderOutliner(){
 
 /* ============ panels ============ */
 const PANELS={company:'Your Company',recruit:'Recruitment',market:'Stock Exchange',acquire:'Acquisitions',morale:'Happiness & Morale',rivals:'Rivals & the Throne',decisions:'Decisions'};
-function openPanel(k,toggle){if(UI.panel===k){if(toggle)closePanel();else renderPanel(false);return}UI.panel=k;document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.v===k));$('#panelTitle').textContent=PANELS[k];$('#panel').classList.add('open');const b=$('#panelBody');b.classList.remove('swap');void b.offsetWidth;b.classList.add('swap');b.scrollTop=0;renderPanel()}
-function closePanel(){UI.panel=null;$('#panel').classList.remove('open');document.querySelectorAll('.navb').forEach(b=>b.classList.remove('on'))}
+function layoutFloats(){const app=$('#app');const narrow=app.classList.contains('w1100');const showDc=!!UI.sel&&!UI.panel;const showOl=!UI.panel&&!showDc&&(!narrow||UI.ol);$('#dcard').classList.toggle('open',showDc);$('#outliner').classList.toggle('hide',!showOl);$('#olToggle').hidden=!narrow||!!UI.panel||showDc;app.classList.toggle('popen',!!UI.panel)}
+function openPanel(k,toggle){if(UI.panel===k){if(toggle)closePanel();else renderPanel(false);return}UI.panel=k;document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.v===k));$('#panelTitle').textContent=PANELS[k];$('#panel').classList.add('open');UI.ol=false;layoutFloats();const b=$('#panelBody');b.classList.remove('swap');void b.offsetWidth;b.classList.add('swap');b.scrollTop=0;renderPanel()}
+function closePanel(){UI.panel=null;$('#panel').classList.remove('open');layoutFloats();document.querySelectorAll('.navb').forEach(b=>b.classList.remove('on'))}
 function renderPanel(keepScroll=true){if(!UI.panel)return;const b=$('#panelBody');const st=b.scrollTop;b.innerHTML=({company:pCompany,recruit:pRecruit,market:pMarket,acquire:pAcquire,morale:pMorale,rivals:pRivals,decisions:pDecisions})[UI.panel]();if(keepScroll)b.scrollTop=st;if(UI.panel==='market')bindMarket()}
 
 function pCompany(){
@@ -885,7 +902,7 @@ function pDecisions(){
  return h}
 
 /* ============ district card ============ */
-function selectDistrict(id){UI.sel=id;document.querySelectorAll('.dist').forEach(p=>p.classList.toggle('sel',p.dataset.d===id));const c=$('#dcard');if(!id){c.classList.remove('open');return}
+function selectDistrict(id){UI.sel=id;document.querySelectorAll('.dist').forEach(p=>p.classList.toggle('sel',p.dataset.d===id));const c=$('#dcard');if(!id){layoutFloats();return}
  const d=DM[id];const inf=influence(id);const o=owners[id];
  let h=`<div class="lbl">${BOROUGHS[d.b].n}</div><h3>${d.n}</h3><div class="small">Controlled by <b style="color:${o?colorOf(o):'var(--muted)'}">${o?esc(nameOf(o)):'no one'}</b> · rent ×${d.rent}</div><div class="sec" style="margin-top:10px"><span class="lbl">Influence</span></div>`;
  const tot=Object.values(inf).reduce((a,b)=>a+b,0)||1;h+=`<div style="display:flex;height:8px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.07)">${Object.entries(inf).map(([k,v])=>`<i style="width:${v/tot*100}%;background:${colorOf(k)}"></i>`).join('')}</div>`;
@@ -894,7 +911,7 @@ function selectDistrict(id){UI.sel=id;document.querySelectorAll('.dist').forEach
  sm.forEach(s=>h+=`<div class="ol-row" data-act="small" data-id="${s.id}"><span style="width:8px;height:8px;transform:rotate(45deg);background:${s.owner?colorOf(s.owner):'#d6dcf5'};flex:none"></span><span class="grow">${esc(s.name)}</span><span class="num small">${fmt$(askPrice(s))}</span></div>`);
  st.forEach(s=>h+=`<div class="ol-row" data-act="stock" data-id="${s.t}"><span class="num" style="color:var(--brass);width:40px">${s.t}</span><span class="grow">${esc(s.n)}</span><span class="num small">$${s.price.toFixed(2)}</span></div>`);
  if(S.co.hq===id)h+=`<div class="small good" style="margin-top:6px">Your headquarters.</div>`;
- c.innerHTML=h;c.classList.add('open');
+ c.innerHTML='<button class="x" data-act="dclose" aria-label="Close">✕</button>'+h;layoutFloats();
 }
 
 /* ============ modals ============ */
@@ -927,7 +944,7 @@ function doOffer(){const s=S.smalls.find(x=>x.id===UI.offer.id);const p=askPrice
  if(S.co.cash<p)return toast('Not enough cash for that offer.','bad');
  const prev=s.owner;
  if(R()<ch){S.co.cash-=p;s.owner='you';s.price=smallPrice(s);S.co.rep=clamp(S.co.rep+2,0,100);if(prev){const rv=S.rivals.find(r=>r.id===prev);rv.cash+=p*.8;S.chars[rv.ceo].opinion-=25}
-  fxArc(S.co.hq,s.d,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts();renderAlerts()},900);toast(`<b>${esc(s.name)}</b> is yours for ${fmt$(p)}.`,'good');flyTo(DM[s.d].c[0],DM[s.d].c[1],Math.min(VT.w,560))}
+  fxArc(S.co.hq,s.d,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts();renderAlerts()},900);toast(`<b>${esc(s.name)}</b> is yours for ${fmt$(p)}.`,'good');flyTo(DM[s.d].c[0],DM[s.d].c[1])}
  else{S.co.cash-=p*.05;s.cool=monthIdx()+2;if(!prev)s.price=Math.round(s.price*1.1);else S.chars[S.rivals.find(r=>r.id===prev).ceo].opinion-=10;toast(`${esc(s.name)} rejected your ${prev?'bid':'offer'}. ${fmt$(p*.05)} lost in fees.`,'bad')}
  refreshAll()}
 function relocateModal(){const opts=DIST.filter(d=>d.id!==S.co.hq&&!S.rivals.some(r=>r.hq===d.id)).sort((a,b)=>b.rent-a.rent);
@@ -1022,7 +1039,9 @@ const ACT={
  close:()=>closePanel(),
  speed:el=>{if(G.modal)return;S.speed=+el.dataset.v;updateTop()},
  rot:()=>cycleRot(),
- oltoggle:()=>{UI.ol=!UI.ol;$('#outliner').classList.toggle('force',UI.ol)},
+ oltoggle:()=>{UI.ol=!UI.ol;if(UI.ol){UI.sel=null;selectDistrict(null)}layoutFloats()},
+ dclose:()=>selectDistrict(null),
+ zoom:el=>{const v=el.dataset.v;if(v==='in')zoomBy(1/1.35);else if(v==='out')zoomBy(1.35);else zoomHome()},
  staff:el=>{const k=el.dataset.v,dd=+el.dataset.d,d=S.co.depts[k];if(dd>0){if(d.staff>=staffCap())return toast(`${DEPTS[k].n} is full. Lease another floor under Decisions.`,'bad');if(S.co.cash<HIRE_FEE)return toast('Not enough cash to hire.','bad');S.co.cash-=HIRE_FEE;d.staff++}else{if(d.staff<=0)return;d.staff--;S.co.cash-=STAFF_SAL;S.co.morale-=.6}refreshAll()},
  appoint:el=>{closeModal();UI.recFilter=el.dataset.v;openPanel('recruit')},
  recf:el=>{UI.recFilter=el.dataset.v||null;renderPanel(false)},
@@ -1042,12 +1061,12 @@ const ACT={
  buy:()=>{const s=S.stocks.find(x=>x.t===UI.stock);let q=Math.floor(+$('#qin').value||0);q=Math.min(q,s.shares-s.own);if(q<=0)return;const cost=q*s.price*(1+fee());if(cost>S.co.cash)return toast('Not enough cash for that order.','bad');S.co.cash-=cost;s.cost=(s.cost*s.own+cost)/(s.own+q);s.own+=q;const imp=q/s.shares*.9;s.price*=1+imp;s.hist[s.hist.length-1]=s.price;toast(`Bought ${fmtN(q)} ${s.t} for ${fmt$(cost)}.`,'good');refreshAll()},
  sell:()=>{const s=S.stocks.find(x=>x.t===UI.stock);let q=Math.min(Math.floor(+$('#qin').value||0),s.own);if(s.ctrl==='you')return toast('You control this company. Its shares are locked.','bad');if(q<=0)return toast('You hold no shares to sell.','bad');const imp=q/s.shares*.9;s.price*=1-imp;const got=q*s.price*(1-fee());S.co.cash+=got;s.own-=q;if(!s.own)s.cost=0;s.hist[s.hist.length-1]=s.price;toast(`Sold ${fmtN(q)} ${s.t} for ${fmt$(got)}.`,got>=q*s.cost?'good':'bad');refreshAll()},
  seize:()=>{const s=S.stocks.find(x=>x.t===UI.stock);s.ctrl='you';S.co.rep=clamp(S.co.rep+6,0,100);fxArc(S.co.hq,s.d,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts()},900);showEvent({title:'Control Seized',who:ceo(),seed:13,tint:'#2a5a4a',text:`You walk into the boardroom of <em>${esc(s.n)}</em> as its new controlling shareholder. The old directors have already cleared their desks.`,opts:[{l:'Excellent',t:`+${fmt$(s.price*s.shares*.006)}/mo · district influence +3`,go(){}}]})},
- small:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);if(!s)return;selectDistrict(s.d);flyTo(s.pos[0],s.pos[1],Math.min(VT.w,520));if(s.owner!=='you'){if(s.cool>monthIdx())return toast(`${esc(s.name)} won't take meetings for a while.`,'bad');offerModal(s)}else{UI.acqFilter='mine';openPanel('acquire')}},
+ small:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);if(!s)return;selectDistrict(s.d);flyTo(s.pos[0],s.pos[1]);if(s.owner!=='you'){if(s.cool>monthIdx())return toast(`${esc(s.name)} won't take meetings for a while.`,'bad');offerModal(s)}else{UI.acqFilter='mine';openPanel('acquire')}},
  offer:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);offerModal(s)},
  offergo:()=>doOffer(),
  sellsub:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);showEvent({title:'Sell '+s.name+'?',text:`A buyer will pay ${fmt$(s.price*.9)} today. The business returns to independent hands.`,opts:[{l:'Sell',t:`+${fmt$(s.price*.9)}`,go(){S.co.cash+=s.price*.9;s.owner=null;renderMarkers();paintDistricts()}},{l:'Keep it',t:'Nothing happens',go(){}}]})},
  acqf:el=>{UI.acqFilter=el.dataset.v;renderPanel(false)},
- dist:el=>{const d=DM[el.dataset.id];selectDistrict(d.id);flyTo(d.c[0],d.c[1],Math.min(VT.w,560))},
+ dist:el=>{const d=DM[el.dataset.id];selectDistrict(d.id);flyTo(d.c[0],d.c[1])},
  perk:el=>{const k=el.dataset.v;S.co.perks[k]=!S.co.perks[k];toast(`${PERKS[k].n} ${S.co.perks[k]?'switched on':'cancelled'}.`,S.co.perks[k]?'good':'');refreshAll()},
  pay:el=>{S.co.pay=el.dataset.v;refreshAll()},
  oneoff:el=>{const o=ONEOFF.find(x=>x.k===el.dataset.v);const c=o.cost();if(S.co.cash<c)return toast('Not enough cash.','bad');S.co.cash-=c;S.cds[o.k]=monthIdx()+o.cd;addMod(o.n,{mor:o.mor,left:o.months});S.co.morale=clamp(S.co.morale+o.mor*.6,0,100);if(o.op)heads().forEach(h=>h.opinion+=o.op);toast(`${o.n}! Morale is climbing.`,'good');confetti();refreshAll()},
@@ -1059,7 +1078,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#map'))return;const e
 document.addEventListener('keydown',e=>{if(!G.running||e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();if(G.modal)return;if(S.speed){G.prevSpeed=S.speed;S.speed=0}else S.speed=G.prevSpeed||1;updateTop()}else if(['Digit1','Digit2','Digit3'].includes(e.code)&&!G.modal){S.speed=+e.code.slice(5);updateTop()}else if(e.code==='Escape'){if(G.modal&&!G.opts)closeModal();else if(!G.modal)closePanel()}});
 $('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal'&&!G.opts)closeModal()});
 
-function toast(html,kind=''){const t=document.createElement('div');t.className='toast '+kind;t.innerHTML=html;const box=$('#toasts');box.prepend(t);while(box.children.length>5)box.lastChild.remove();setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),550)},5200)}
+function toast(html,kind=''){const t=document.createElement('div');t.className='toast '+kind;t.innerHTML=html;const box=$('#toasts');box.prepend(t);const mx=$('#app').classList.contains('short')?2:4;while(box.children.length>mx)box.lastChild.remove();setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),550)},5200)}
 function confetti(){const c=S.co.color;const g=$('#gFx');const d=DM[S.co.hq].c;for(let i=0;i<18;i++){const a=Math.random()*6.28,r=10+Math.random()*26;const el=document.createElementNS(NS,'circle');el.setAttribute('r','1.6');el.setAttribute('fill',[c,'#fff','#45d6c1','#ff6fae'][i%4]);el.innerHTML=`<animate attributeName="cx" from="${d[0]}" to="${d[0]+Math.cos(a)*r}" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".2 .9 .25 1" keyTimes="0;1"/><animate attributeName="cy" from="${d[1]-10}" to="${d[1]-10+Math.sin(a)*r+12}" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".2 .9 .25 1" keyTimes="0;1"/><animate attributeName="opacity" from="1" to="0" dur="1.4s" fill="freeze"/>`;g.appendChild(el);setTimeout(()=>el.remove(),1500)}}
 
 /* ============ start screen ============ */
@@ -1111,7 +1130,7 @@ function boot(fresh){
  try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
  buildMap();buildTop();buildTicker();renderMarkers();paintDistricts();
  $('#coName').textContent=S.co.name;$('#coSub').textContent=SECTORS[S.co.sector].n+' · '+DM[S.co.hq].n;$('#coMono').textContent=S.co.name[0];$('#coMono').style.background=S.co.color;
- refreshAll();
+ refreshAll();layoutFloats();
  for(const k in TW)TW[k].cur=TW[k].t;
  $('#start').classList.add('gone');setTimeout(()=>{$('#start').hidden=true},950);
  G.running=true;G.prevSpeed=1;
