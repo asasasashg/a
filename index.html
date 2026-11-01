@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body>
+<title>Manhattan Dynasty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,500;0,700;1,500;1,700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Josefin+Sans:wght@400;600;700&display=swap">
+<style>
+/* Layout: full-bleed city map; CK-style chrome floats over it (top bar + ticker, left drawer, right outliner, bottom-left CEO + menu). Locked to landscape. */
+:root{
+  --ink:#080d1c; --water:#0b1730; --water2:#10224a; --land:#1b2547; --land2:#232f59; --line:#3a4780;
+  --panel:rgba(12,17,36,.9); --panel2:#121a36; --raise:#18224a;
+  --brass:#e6c07a; --brass2:#b08a45; --teal:#45d6c1; --coral:#ff7b6b; --violet:#9b87ff; --warn:#f2c14e;
+  --fg:#ece8f6; --muted:#97a0c6; --dim:#5e6894;
+  --f-display:'Bodoni Moda',Didot,'Times New Roman',serif;
+  --f-label:'Josefin Sans','Futura','Century Gothic',sans-serif;
+  --f-body:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-num:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+  --ease:cubic-bezier(.22,.9,.24,1);
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;background:var(--ink);color:var(--fg);overflow:hidden}
+body{font-family:var(--f-body);font-size:14px;-webkit-font-smoothing:antialiased;touch-action:none;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+input{font:inherit;color:var(--fg)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.lbl{font-family:var(--f-label);text-transform:uppercase;letter-spacing:.12em;font-size:10.5px;color:var(--muted);font-weight:600}
+.good{color:var(--teal)} .bad{color:var(--coral)} .warn{color:var(--warn)}
+
+[hidden]{display:none!important}
+#app{position:fixed;left:0;top:0;width:100vw;height:100vh;overflow:hidden;background:var(--water)}
+#app.rot{transform-origin:top left;transform:rotate(90deg)}
+#map{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:grab}
+#map.drag{cursor:grabbing}
+#vignette{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(4,7,16,.75) 100%)}
+
+/* districts */
+.dist{transition:fill .9s var(--ease),fill-opacity .6s var(--ease),stroke .3s;stroke:#46548f;stroke-width:.8;cursor:pointer}
+.dist:hover{fill-opacity:.95!important;stroke:#d9e0ff;stroke-width:1.4}
+.dist.sel{stroke:var(--brass);stroke-width:2;stroke-dasharray:5 3;animation:march 1.2s linear infinite}
+@keyframes march{to{stroke-dashoffset:-16}}
+.dlabel{font-family:var(--f-label);font-weight:600;letter-spacing:.06em;fill:#e8ecff;paint-order:stroke;stroke:rgba(8,13,28,.75);stroke-width:2.6px;pointer-events:none;text-transform:uppercase}
+.blabel{font-family:var(--f-display);font-style:italic;font-weight:700;fill:#c6d0ff;opacity:.13;pointer-events:none;letter-spacing:.18em}
+.marker{cursor:pointer;transition:transform .3s}
+.tower{transition:fill .9s var(--ease)}
+
+/* chrome */
+.deco{background:var(--panel);border:1px solid rgba(230,192,122,.55);box-shadow:inset 0 0 0 3px rgba(18,26,54,.95),inset 0 0 0 4px rgba(230,192,122,.18),0 18px 40px rgba(0,0,0,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+#topbar{position:absolute;left:0;right:0;top:0;height:46px;display:flex;align-items:center;gap:14px;padding:0 max(12px,env(safe-area-inset-right,0px)) 0 max(12px,env(safe-area-inset-left,0px));background:linear-gradient(180deg,rgba(9,13,30,.97),rgba(12,18,40,.92));border-bottom:1px solid rgba(230,192,122,.45);z-index:20}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mono{width:30px;height:30px;flex:none;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:15px;color:var(--ink);clip-path:polygon(50% 0,100% 30%,100% 100%,0 100%,0 30%)}
+.coname{font-family:var(--f-display);font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px}
+.cosub{font-family:var(--f-label);font-size:9.5px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase;white-space:nowrap}
+#res{display:flex;gap:4px;flex:1;justify-content:center;min-width:0;overflow:hidden}
+.chip{display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:3px;background:rgba(255,255,255,.03);border:1px solid rgba(151,160,198,.14);white-space:nowrap;transition:background .3s}
+.chip:hover{background:rgba(230,192,122,.08)}
+.chip svg{width:15px;height:15px;flex:none}
+.chip .v{font-family:var(--f-num);font-size:13px;font-weight:500}
+.chip .k{font-family:var(--f-label);font-size:9px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+.clock{display:flex;align-items:center;gap:8px}
+.date{font-family:var(--f-display);font-size:14px;font-weight:500;min-width:96px;text-align:right}
+.dprog{height:2px;background:rgba(255,255,255,.08);margin-top:3px;overflow:hidden}
+.dprog i{display:block;height:100%;background:var(--brass);width:0}
+.speeds{display:flex;border:1px solid rgba(230,192,122,.35);border-radius:3px;overflow:hidden}
+.speeds button{width:28px;height:26px;display:grid;place-items:center;font-size:11px;color:var(--muted);transition:background .25s,color .25s}
+.speeds button.on{background:var(--brass);color:var(--ink)}
+.iconbtn{width:30px;height:28px;display:grid;place-items:center;border:1px solid rgba(230,192,122,.35);border-radius:3px;color:var(--brass);transition:background .25s}
+.iconbtn:hover{background:rgba(230,192,122,.12)}
+.iconbtn svg{width:16px;height:16px}
+
+#ticker{position:absolute;top:46px;left:0;right:0;height:22px;background:rgba(5,8,18,.88);border-bottom:1px solid rgba(69,214,193,.18);overflow:hidden;z-index:19;font-family:var(--f-num);font-size:11.5px;display:flex;align-items:center}
+#tickTrack{display:flex;white-space:nowrap;will-change:transform}
+.tk{padding:0 16px;display:inline-flex;gap:7px;color:#cfd5f2}
+.tk b{color:var(--brass);font-weight:600}
+
+#alerts{position:absolute;top:76px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:15}
+.alert{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 7px;border-radius:20px;background:rgba(12,17,36,.92);border:1px solid rgba(255,123,107,.5);font-size:12px;animation:pop .5s var(--ease) both;transition:transform .2s}
+.alert:hover{transform:translateY(-2px)}
+.alert i{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:700;font-size:11px;background:var(--coral);color:var(--ink)}
+.alert.info{border-color:rgba(230,192,122,.5)} .alert.info i{background:var(--brass)}
+@keyframes pop{from{opacity:0;transform:translateY(-8px) scale(.9)}}
+
+/* bottom-left: CEO + menu */
+#dock{position:absolute;left:max(10px,env(safe-area-inset-left,0px));bottom:10px;display:flex;align-items:flex-end;gap:10px;z-index:18}
+#ceoBadge{position:relative;cursor:pointer}
+.frame{position:relative;padding:3px;border-radius:52px 52px 6px 6px;background:linear-gradient(160deg,#f5dca3,#9c7536 40%,#e6c07a 60%,#7a5a26);box-shadow:0 10px 26px rgba(0,0,0,.5);transition:transform .35s var(--ease)}
+.frame>div{border-radius:49px 49px 4px 4px;overflow:hidden;background:#141b38;line-height:0}
+.frame:hover{transform:translateY(-3px)}
+#ceoBadge .frame{width:96px}
+#ceoBadge .nm{position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);white-space:nowrap;font-family:var(--f-label);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;background:var(--panel2);border:1px solid rgba(230,192,122,.6);padding:3px 7px 2px;color:var(--brass)}
+#nav{display:flex;gap:4px;padding:6px;border-radius:4px}
+.navb{width:58px;height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:3px;color:var(--muted);transition:background .3s,color .3s,transform .3s var(--ease);position:relative}
+.navb svg{width:21px;height:21px}
+.navb span{font-family:var(--f-label);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase}
+.navb:hover{color:var(--fg);background:rgba(255,255,255,.05);transform:translateY(-2px)}
+.navb.on{color:var(--ink);background:linear-gradient(180deg,#f1d391,#c99f55)}
+.navb .dot{position:absolute;top:5px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--coral);box-shadow:0 0 0 2px var(--panel2)}
+
+/* left drawer */
+#panel{position:absolute;left:max(10px,env(safe-area-inset-left,0px));top:78px;bottom:96px;width:min(440px,calc(100% - 300px));min-width:300px;z-index:17;display:flex;flex-direction:column;border-radius:4px;transform:translateX(calc(-100% - 30px));opacity:0;transition:transform .55s var(--ease),opacity .4s;pointer-events:none}
+#panel.open{transform:none;opacity:1;pointer-events:auto}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 10px 16px;border-bottom:1px solid rgba(230,192,122,.25)}
+.phead h2{margin:0;font-family:var(--f-display);font-weight:700;font-size:21px;letter-spacing:.01em}
+.phead .x{width:28px;height:28px;font-size:18px;color:var(--muted);border-radius:3px}
+.phead .x:hover{color:var(--fg);background:rgba(255,255,255,.06)}
+#panelBody{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 14px 16px 16px;scrollbar-width:thin;scrollbar-color:var(--brass2) transparent;touch-action:pan-y}
+#panelBody.swap{animation:swap .45s var(--ease)}
+@keyframes swap{from{opacity:0;transform:translateX(-14px)}}
+.sec{margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.sec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(230,192,122,.35),transparent)}
+.sec:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{padding:8px 10px;background:rgba(255,255,255,.03);border:1px solid rgba(151,160,198,.12);border-radius:3px}
+.stat .v{font-family:var(--f-num);font-size:15px;margin-top:3px}
+.p{color:var(--muted);font-size:12.5px;line-height:1.5;margin:4px 0 8px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 12px;border-radius:3px;font-family:var(--f-label);font-weight:700;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;background:linear-gradient(180deg,#f1d391,#c99f55);color:var(--ink);transition:transform .25s var(--ease),filter .25s,opacity .25s;white-space:nowrap}
+.btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:transparent;color:var(--brass);border:1px solid rgba(230,192,122,.5)}
+.btn.teal{background:linear-gradient(180deg,#6ff0dc,#2fb3a1)}
+.btn.red{background:linear-gradient(180deg,#ff9a8d,#e0584a)}
+.btn.sm{padding:5px 8px;font-size:9.5px}
+.btn[disabled]{opacity:.35;pointer-events:none}
+
+/* dept cards */
+.dept{display:grid;grid-template-columns:54px 1fr;gap:10px;padding:9px;border-radius:3px;background:rgba(255,255,255,.025);border:1px solid rgba(151,160,198,.12);margin-bottom:7px;transition:border-color .3s,background .3s}
+.dept:hover{border-color:rgba(230,192,122,.35);background:rgba(255,255,255,.04)}
+.seat{width:54px;cursor:pointer}
+.seat .frame{padding:2px;border-radius:30px 30px 4px 4px}
+.seat .frame>div{border-radius:28px 28px 3px 3px}
+.empty{height:68px;border:1px dashed rgba(230,192,122,.45);border-radius:28px 28px 3px 3px;display:grid;place-items:center;color:var(--brass);font-size:22px;transition:background .3s}
+.empty:hover{background:rgba(230,192,122,.1)}
+.drow{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.dname{font-family:var(--f-display);font-weight:700;font-size:15px}
+.bar{height:5px;background:rgba(255,255,255,.07);border-radius:3px;overflow:hidden;margin:6px 0 4px}
+.bar i{display:block;height:100%;border-radius:3px;transition:width .8s var(--ease)}
+.stepper{display:flex;align-items:center;gap:2px}
+.stepper button{width:22px;height:22px;border-radius:3px;background:rgba(255,255,255,.06);font-weight:700;transition:background .2s}
+.stepper button:hover{background:rgba(230,192,122,.25)}
+.stepper .num{min-width:38px;text-align:center;font-size:12px}
+.small{font-size:11.5px;color:var(--muted)}
+.trait{display:inline-block;padding:1px 6px;margin:2px 3px 0 0;border-radius:2px;font-size:10px;font-family:var(--f-label);letter-spacing:.06em;text-transform:uppercase;background:rgba(155,135,255,.14);color:#c9bfff;border:1px solid rgba(155,135,255,.3)}
+.trait.pos{background:rgba(69,214,193,.12);color:#8cf0e0;border-color:rgba(69,214,193,.3)}
+.trait.neg{background:rgba(255,123,107,.12);color:#ffb0a6;border-color:rgba(255,123,107,.3)}
+
+.cand{display:grid;grid-template-columns:64px 1fr;gap:11px;padding:10px;border:1px solid rgba(151,160,198,.14);border-radius:3px;margin-bottom:8px;background:rgba(255,255,255,.025);transition:transform .35s var(--ease),border-color .3s;animation:rise .5s var(--ease) both}
+.cand:hover{transform:translateX(3px);border-color:rgba(230,192,122,.4)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}}
+.cname{font-family:var(--f-display);font-weight:700;font-size:15.5px}
+.skill{display:inline-flex;align-items:center;gap:4px;font-family:var(--f-num);font-size:12px;color:var(--brass)}
+.tabs{display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap}
+.tab{padding:5px 10px;border-radius:14px;font-size:11.5px;border:1px solid rgba(151,160,198,.25);color:var(--muted);transition:all .25s}
+.tab.on{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+
+/* market */
+.stk{display:grid;grid-template-columns:52px 1fr 70px 62px 58px;align-items:center;gap:6px;padding:6px 6px;border-radius:3px;cursor:pointer;transition:background .25s;font-size:12.5px}
+.stk:hover{background:rgba(255,255,255,.05)}
+.stk.on{background:rgba(230,192,122,.12);box-shadow:inset 2px 0 0 var(--brass)}
+.stk .t{font-family:var(--f-num);font-weight:600;color:var(--brass)}
+.stk .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:11.5px}
+.stk .p,.stk .c{font-family:var(--f-num);text-align:right;margin:0;color:var(--fg);font-size:12.5px}
+.chartbox{background:rgba(5,9,22,.6);border:1px solid rgba(151,160,198,.14);border-radius:3px;padding:8px;margin:8px 0}
+.qty{display:flex;gap:4px;flex-wrap:wrap;margin:6px 0}
+.qty button{padding:4px 8px;border-radius:3px;font-family:var(--f-num);font-size:11px;background:rgba(255,255,255,.05);border:1px solid transparent;transition:all .2s}
+.qty button.on{border-color:var(--brass);color:var(--brass)}
+.qin{width:110px;padding:5px 8px;background:rgba(0,0,0,.3);border:1px solid rgba(151,160,198,.3);border-radius:3px;font-family:var(--f-num)}
+
+.co{display:grid;grid-template-columns:8px 1fr auto;gap:10px;align-items:center;padding:8px 9px 8px 0;border-bottom:1px solid rgba(151,160,198,.1);transition:background .25s;cursor:pointer}
+.co:hover{background:rgba(255,255,255,.04)}
+.co .sw{width:8px;align-self:stretch;border-radius:0 2px 2px 0}
+.co .cn{font-weight:600;font-size:13px}
+
+/* morale */
+.gauge{display:flex;align-items:center;gap:14px;padding:6px 0 4px}
+.gauge svg{width:132px;height:80px;flex:none}
+.gauge .arc{transition:stroke-dashoffset 1.2s var(--ease),stroke 1s}
+.perk{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(151,160,198,.12);border-radius:3px;margin-bottom:6px;transition:border-color .3s,background .3s}
+.perk.on{border-color:rgba(69,214,193,.5);background:rgba(69,214,193,.06)}
+.toggle{width:38px;height:21px;border-radius:12px;background:rgba(255,255,255,.12);position:relative;transition:background .35s}
+.toggle::after{content:"";position:absolute;left:3px;top:3px;width:15px;height:15px;border-radius:50%;background:#dfe3f7;transition:transform .35s var(--ease)}
+.perk.on .toggle{background:var(--teal)}
+.perk.on .toggle::after{transform:translateX(17px)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid rgba(230,192,122,.35);border-radius:3px;overflow:hidden}
+.seg button{padding:7px 4px;font-size:11.5px;transition:background .3s,color .3s;color:var(--muted)}
+.seg button.on{background:var(--brass);color:var(--ink);font-weight:600}
+.brk{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dotted rgba(151,160,198,.15)}
+.crowd{display:flex;flex-wrap:wrap;gap:3px;margin:8px 0}
+.crowd i{width:9px;height:14px;border-radius:5px 5px 2px 2px;display:block;transition:background 1s;animation:bob 2.4s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-2px)}}
+
+/* rivals */
+.rival{display:grid;grid-template-columns:60px 1fr;gap:11px;padding:10px;border-radius:3px;margin-bottom:8px;background:rgba(255,255,255,.025);border:1px solid rgba(151,160,198,.12);border-left:3px solid}
+.lead{display:grid;grid-template-columns:110px 1fr 70px;gap:8px;align-items:center;font-size:12px;margin:5px 0}
+.lead .b{height:12px;border-radius:2px;transition:width 1s var(--ease)}
+
+/* outliner */
+#outliner{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:78px;width:236px;max-height:calc(100% - 200px);overflow-y:auto;border-radius:4px;z-index:16;padding:10px 10px 6px;transition:transform .5s var(--ease),opacity .4s;scrollbar-width:none;touch-action:pan-y}
+#outliner.hide{transform:translateX(calc(100% + 30px));opacity:0;pointer-events:none}
+.ol-h{display:flex;align-items:center;justify-content:space-between;margin:8px 0 5px}
+.ol-h:first-child{margin-top:0}
+.ol-row{display:flex;align-items:center;gap:8px;padding:4px 4px;border-radius:3px;cursor:pointer;font-size:12px;transition:background .25s}
+.ol-row:hover{background:rgba(255,255,255,.05)}
+.ol-row .mini{width:26px;height:32px;border-radius:13px 13px 2px 2px;overflow:hidden;flex:none;border:1px solid rgba(230,192,122,.5);line-height:0}
+.ol-row .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#olToggle{position:absolute;right:max(10px,env(safe-area-inset-right,0px));top:78px;z-index:16;display:none}
+
+/* district card */
+#dcard{position:absolute;right:max(256px,calc(env(safe-area-inset-right,0px) + 256px));top:78px;width:250px;z-index:16;border-radius:4px;padding:12px;transform:translateY(-8px);opacity:0;pointer-events:none;transition:transform .45s var(--ease),opacity .35s}
+#dcard.open{transform:none;opacity:1;pointer-events:auto}
+#dcard h3{margin:2px 0 2px;font-family:var(--f-display);font-size:19px}
+
+#toasts{position:absolute;right:max(10px,env(safe-area-inset-right,0px));bottom:12px;display:flex;flex-direction:column-reverse;gap:6px;z-index:25;width:290px;pointer-events:none}
+.toast{padding:9px 12px;border-radius:3px;font-size:12.5px;line-height:1.4;background:rgba(12,17,36,.95);border:1px solid rgba(151,160,198,.25);border-left:3px solid var(--brass);box-shadow:0 10px 24px rgba(0,0,0,.4);animation:tin .6s var(--ease) both;transition:opacity .5s,transform .5s var(--ease)}
+.toast.good{border-left-color:var(--teal)} .toast.bad{border-left-color:var(--coral)}
+.toast.out{opacity:0;transform:translateX(30px)}
+@keyframes tin{from{opacity:0;transform:translateX(40px)}}
+
+/* modal */
+#modal{position:absolute;inset:0;z-index:40;display:grid;place-items:center;background:rgba(4,7,16,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:fade .35s both;padding:12px}
+@keyframes fade{from{opacity:0}}
+.ev{width:min(620px,100%);max-height:100%;display:flex;flex-direction:column;border-radius:4px;animation:evin .6s var(--ease) both;overflow:hidden}
+@keyframes evin{from{opacity:0;transform:translateY(22px) scale(.96)}}
+.ev-title{text-align:center;padding:12px 16px 10px;font-family:var(--f-display);font-weight:700;font-size:22px;border-bottom:1px solid rgba(230,192,122,.3);background:linear-gradient(180deg,rgba(230,192,122,.12),transparent)}
+.ev-body{display:grid;grid-template-columns:150px 1fr;gap:16px;padding:14px 16px;overflow-y:auto;touch-action:pan-y}
+.ev-art{position:relative}
+.ev-text{font-size:14px;line-height:1.6;color:#d9dcf0}
+.ev-text em{font-family:var(--f-display);font-size:15px;color:var(--brass)}
+.ev-opts{display:flex;flex-direction:column;gap:6px;padding:0 16px 14px}
+.opt{text-align:left;padding:9px 12px;border-radius:3px;border:1px solid rgba(230,192,122,.4);background:rgba(230,192,122,.06);transition:background .25s,transform .25s var(--ease),border-color .25s}
+.opt:hover{background:rgba(230,192,122,.16);transform:translateX(4px);border-color:var(--brass)}
+.opt b{display:block;font-weight:600;font-size:13.5px}
+.opt span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.opt[disabled]{opacity:.4;pointer-events:none}
+.slider{width:100%;accent-color:var(--brass)}
+
+/* start screen */
+#start{position:absolute;inset:0;z-index:60;background:linear-gradient(180deg,#070b1a 0%,#121a3f 55%,#2a2350 78%,#5a3a5c 100%);display:grid;grid-template-columns:1.1fr 1fr;overflow:hidden;transition:opacity .9s var(--ease),transform .9s var(--ease)}
+#start.gone{opacity:0;transform:scale(1.04);pointer-events:none}
+#skyline{position:absolute;inset:0;width:100%;height:100%}
+.st-left{position:relative;display:flex;flex-direction:column;justify-content:center;padding:24px 24px 24px max(32px,env(safe-area-inset-left,0px));z-index:2}
+.st-title{font-family:var(--f-display);font-weight:700;font-size:clamp(34px,6.4vw,78px);line-height:.92;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.st-title span{display:block;font-style:italic;font-weight:500;color:var(--brass)}
+.st-title .w{display:inline-block;animation:lett 1.1s var(--ease) both}
+@keyframes lett{from{opacity:0;transform:translateY(24px);filter:blur(6px)}}
+.st-tag{font-family:var(--f-label);letter-spacing:.3em;text-transform:uppercase;font-size:11px;color:#c7cdf0;margin-top:14px;animation:lett 1.2s .6s var(--ease) both}
+.st-right{position:relative;z-index:2;overflow-y:auto;padding:16px max(20px,env(safe-area-inset-right,0px)) 16px 8px;display:flex;align-items:center;touch-action:pan-y}
+.setup{width:100%;border-radius:4px;padding:16px;animation:evin .9s .3s var(--ease) both}
+.setup .row{display:grid;grid-template-columns:96px 1fr;gap:14px}
+.field{margin-bottom:10px}
+.field input[type=text]{width:100%;box-sizing:border-box;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid rgba(151,160,198,.3);border-radius:3px;font-family:var(--f-display);font-size:16px}
+.pills{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}
+.pill{padding:5px 9px;border-radius:3px;font-size:11.5px;border:1px solid rgba(151,160,198,.25);color:#cdd2ee;transition:all .25s}
+.pill.on{background:var(--brass);color:var(--ink);border-color:var(--brass);font-weight:600}
+.sw{width:24px;height:24px;border-radius:50%;border:2px solid transparent;transition:transform .25s var(--ease)}
+.sw.on{border-color:#fff;transform:scale(1.15)}
+select{width:100%;padding:7px 8px;background:rgba(0,0,0,.35);border:1px solid rgba(151,160,198,.3);border-radius:3px;color:var(--fg);font:inherit}
+
+/* avatars */
+.av{display:block;width:100%;height:auto}
+.av .eyes{animation:blink 6s infinite;transform-origin:50px 51px;transform-box:view-box}
+@keyframes blink{0%,95%,100%{transform:scaleY(1)}97%{transform:scaleY(.08)}}
+.breathe .fig{animation:breathe 4.5s ease-in-out infinite;transform-origin:50px 120px;transform-box:view-box}
+@keyframes breathe{50%{transform:translateY(.8px) scale(1.006)}}
+
+/* compact (phone landscape) — classes set from the app's own size so they hold when rotated */
+#app.short #topbar{height:40px} #app.short #ticker{top:40px;height:19px;font-size:10.5px}
+#app.short #panel{top:66px;bottom:72px} #app.short #outliner,#app.short #dcard,#app.short #olToggle{top:66px} #app.short #alerts{top:64px}
+#app.short .navb{width:44px;height:42px} #app.short .navb span{display:none} #app.short .navb svg{width:19px;height:19px}
+#app.short #ceoBadge .frame{width:62px} #app.short #ceoBadge .nm{display:none}
+#app.short .chip .k{display:none} #app.short .chip{padding:3px 6px}
+#app.short .ev-body{grid-template-columns:96px 1fr} #app.short .ev-title{font-size:18px;padding:8px}
+#app.w1100 #outliner{display:none} #app.w1100 #outliner.force{display:block} #app.w1100 #olToggle{display:grid} #app.w1100 #dcard{right:max(50px,env(safe-area-inset-right,0px))}
+#app.w900 .chip.opt{display:none} #app.w900 .coname{max-width:110px} #app.w900 .cosub{display:none} #app.w900 .date{min-width:0;font-size:12px}
+#app.w700 .st-left{display:none} #app.w700 #start{grid-template-columns:1fr} #app.w700 #alerts{display:none}
+#app.rot #panelBody,#app.rot #outliner,#app.rot .st-right,#app.rot .ev-body{touch-action:pan-x pan-y}
+@media (prefers-reduced-motion:reduce){ *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.001s!important} }
+</style>
+
+<div id="app">
+  <svg id="map" preserveAspectRatio="none" aria-label="Map of New York City districts"></svg>
+  <div id="vignette"></div>
+  <header id="topbar">
+    <div class="brand"><div class="mono" id="coMono">M</div><div style="min-width:0"><div class="coname" id="coName">Manhattan Dynasty</div><div class="cosub" id="coSub"></div></div></div>
+    <div id="res"></div>
+    <div class="clock">
+      <div><div class="date" id="date">1 Jan 2027</div><div class="dprog"><i id="dprog"></i></div></div>
+      <div class="speeds" id="speeds">
+        <button data-act="speed" data-v="0" title="Pause (Space)">❚❚</button>
+        <button data-act="speed" data-v="1" title="Normal (1)">▶</button>
+        <button data-act="speed" data-v="2" title="Fast (2)">▶▶</button>
+        <button data-act="speed" data-v="3" title="Fastest (3)">▶▶▶</button>
+      </div>
+      <button class="iconbtn" data-act="rot" id="rotBtn" title="Rotate screen sideways"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M8 3h5a5 5 0 0 1 5 4M16 5l2 2 2-2"/></svg></button>
+    </div>
+  </header>
+  <div id="ticker"><div id="tickTrack"></div></div>
+  <div id="alerts"></div>
+  <section id="panel" class="deco"><div class="phead"><h2 id="panelTitle"></h2><button class="x" data-act="close" aria-label="Close panel">✕</button></div><div id="panelBody"></div></section>
+  <button class="iconbtn deco" id="olToggle" data-act="oltoggle" title="Show outliner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+  <aside id="outliner" class="deco"></aside>
+  <div id="dcard" class="deco"></div>
+  <div id="dock"><div id="ceoBadge" data-act="char" data-id=""></div><nav id="nav" class="deco"></nav></div>
+  <div id="toasts"></div>
+  <div id="modal" hidden></div>
+  <div id="start"></div>
+</div>
+
+<script>
+"use strict";
+/* ============ utilities ============ */
+const $=(s,el=document)=>el.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+let R=Math.random;
+const pick=a=>a[Math.floor(R()*a.length)];
+function rng(seed){let a=seed>>>0;return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function gauss(){let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+function fmt$(n){const s=n<0?'-':'';n=Math.abs(n);if(n>=1e9)return s+'$'+(n/1e9).toFixed(2)+'B';if(n>=1e6)return s+'$'+(n/1e6).toFixed(n>=1e8?0:n>=1e7?1:2)+'M';if(n>=1e3)return s+'$'+Math.round(n/1e3)+'K';return s+'$'+Math.round(n)}
+const fmtPct=x=>(x>=0?'+':'')+(x*100).toFixed(1)+'%';
+const fmtN=n=>n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e4?(n/1e3).toFixed(1)+'K':Math.round(n).toLocaleString('en-US');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sgn=(n,f=fmt$)=>(n>=0?'+':'')+f(n);
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const IC={
+ company:'M4 21V6l8-4 8 4v15M9 21v-4h6v4M8 9h2M14 9h2M8 13h2M14 13h2',
+ recruit:'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21c0-4 3-6.5 7-6.5s7 2.5 7 6.5M19 8v6M16 11h6',
+ market:'M3 20h18M5 16l4-5 4 3 6-8M15 6h4v4',
+ acquire:'M12 3v3M12 18v3M3 12h3M18 12h3M6.5 12a5.5 5.5 0 1 0 11 0a5.5 5.5 0 1 0-11 0M12 12h.01',
+ morale:'M12 20s-7.5-4.6-7.5-10.3A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.7C19.5 15.4 12 20 12 20z',
+ rivals:'M4 4l8.5 8.5M4 4h4M4 4v4M20 4l-8.5 8.5M20 4h-4M20 4v4M6 15l3 3M5 19l2-2M18 15l-3 3M19 19l-2-2',
+ decisions:'M6 3h10a3 3 0 0 1 3 3v15H9a3 3 0 0 1-3-3zM6 18a3 3 0 0 0-3-3V6M10 8h6M10 12h6',
+ cash:'M3 7h18v10H3zM12 12m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0M6 10v4M18 10v4',
+ profit:'M4 17l5-5 4 3 7-8M15 7h5v5',
+ val:'M6 3h12l3 6-9 12L3 9zM3 9h18M9 3l3 18M15 3l-3 18',
+ rep:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
+ quality:'M12 2l2 4 4 1-3 3 1 5-4-2-4 2 1-5-3-3 4-1zM8 21h8',
+ map:'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15'
+};
+const icon=(k,c='currentColor',w=1.7)=>`<svg viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg>`;
+
+/* ============ static data ============ */
+const SECTORS={
+ tech:{n:'Technology',base:78000,mult:6.5,col:'#4cc9f0',d:'High multiples. Lives and dies by product quality.'},
+ fin:{n:'Finance',base:84000,mult:4.5,col:'#e6c07a',d:'Strong cash flow. Finance staff earn double.'},
+ media:{n:'Media',base:72000,mult:4,col:'#ff6fae',d:'Reputation swings revenue hard.'},
+ re:{n:'Real Estate',base:90000,mult:3.6,col:'#d0a476',d:'Steady rents. Extra district influence.'},
+ retail:{n:'Retail',base:76000,mult:3,col:'#ff9a52',d:'Thin margins, loyal crowds.'},
+ bio:{n:'Biotech',base:64000,mult:8,col:'#8be38f',d:'Slow burn, huge valuations.'}
+};
+const DEPTS={
+ eng:{n:'Engineering',col:'#4cc9f0',eff:'Builds product quality'},
+ sales:{n:'Sales',col:'#e6c07a',eff:'Brings in revenue'},
+ mkt:{n:'Marketing',col:'#ff6fae',eff:'Grows reputation and reach'},
+ fin:{n:'Finance',col:'#8be38f',eff:'Lower trading fees, better deals, interest'},
+ hr:{n:'People & Culture',col:'#ff9a52',eff:'Raises company morale'},
+ legal:{n:'Legal',col:'#9b87ff',eff:'Better acquisition odds, scandal shield'},
+ ops:{n:'Operations',col:'#45d6c1',eff:'Cuts operating expenses'}
+};
+const TRAITS={
+ ambitious:{n:'Ambitious',s:2,op:-1,c:'',d:'+2 skill. Always wants more.'},
+ loyal:{n:'Loyal',s:0,op:2,c:'pos',d:'Opinion of you rises every month.'},
+ greedy:{n:'Greedy',s:1,sal:1.35,c:'neg',d:'+1 skill, asks 35% more pay.'},
+ genius:{n:'Genius',s:4,c:'pos',d:'+4 skill.'},
+ lazy:{n:'Lazy',s:-3,c:'neg',d:'-3 skill.'},
+ charismatic:{n:'Charismatic',s:1,mor:3,c:'pos',d:'+1 skill, +3 company morale.'},
+ workaholic:{n:'Workaholic',s:2,mor:-1,c:'',d:'+2 skill, -1 morale.'},
+ paranoid:{n:'Paranoid',s:0,op:-.5,c:'',d:'Shields the company from scandals.'},
+ visionary:{n:'Visionary',s:1,c:'pos',d:'+1 skill, extra product quality.'},
+ diligent:{n:'Diligent',s:1,op:.5,c:'pos',d:'+1 skill, steady temperament.'},
+ networker:{n:'Networker',s:0,c:'pos',d:'+0.6 reputation every month.'},
+ hothead:{n:'Hothead',s:1,mor:-2,c:'neg',d:'+1 skill, -2 morale.'}
+};
+const PERKS={
+ lunch:{n:'Catered Lunch',per:420,flat:0,mor:6,d:'Daily spread from Ninth Avenue kitchens.'},
+ metro:{n:'Commuter Card',per:130,flat:0,mor:3,d:'Subway and ferry fares, paid in full.'},
+ gym:{n:'Rooftop Gym',per:90,flat:30000,mor:4,d:'Treadmills facing the skyline.'},
+ remote:{n:'Remote Fridays',per:0,flat:0,mor:5,d:'Free, but Sales output drops 5%.'},
+ pets:{n:'Dog-Friendly Office',per:0,flat:6000,mor:3,d:'The bodega cat is welcome too.'},
+ pods:{n:'Nap Pods & Game Room',per:0,flat:25000,mor:3,d:'Pinball, ping-pong and quiet pods.'},
+ equity:{n:'Employee Equity Plan',pct:.02,mor:7,d:'Costs 2% of revenue. Heads gain +1 opinion a month.'}
+};
+const PAY={lean:{n:'Lean',m:.85,mor:-8},market:{n:'Market',m:1,mor:0},gen:{n:'Generous',m:1.2,mor:7},lavish:{n:'Lavish',m:1.45,mor:13}};
+const STAFF_SAL=11000, HIRE_FEE=15000;
+const EDU={wharton:{n:'Wharton MBA',st:{fin:4,neg:2}},mit:{n:'MIT Engineer',st:{vis:5}},bronx:{n:'Bronx Street-Smart',st:{cun:4,neg:2}},juilliard:{n:'Juilliard Dropout',st:{cha:5}}};
+const PERS={ruthless:{n:'Ruthless',st:{cun:3},d:'-2 morale'},charming:{n:'Charming',st:{cha:3}},visionary:{n:'Visionary',st:{vis:3}},shrewd:{n:'Shrewd',st:{neg:3}}};
+const CSTATS={neg:'Negotiation',fin:'Finance',cha:'Charisma',cun:'Cunning',vis:'Vision'};
+const FIRST_M=['James','Marcus','Vincent','Theo','Rafael','Eli','Desmond','Hiro','Arjun','Viktor','Darnell','Sal','Leon','Omar','Benji','Kofi','Mateo','Wes','Felix','Ignacio','Calvin','Dmitri','Andre','Grant','Jonah','Tariq'];
+const FIRST_F=['Margaret','Vivian','Priya','Celeste','Naomi','Rosa','Ingrid','Mei','Danielle','Imani','Lucia','Harper','Yara','Simone','Gloria','Esther','Noor','Camille','Tess','Ada','Renata','Joan','Keiko','Fatima'];
+const LAST=['Whitmore','Castellano','Okafor','Feldman','Nakamura','Sterling','Rosenthal','Vasquez','Delacroix','Kowalski','Brandt','Achebe','Moretti','Lindqvist','Chen','Haverford','Abernathy','Petrov','Goldberg','Reyes','Van Dyke','Montague','Osei','Patel',"O'Rourke",'Kim','Stavros','Bellamy','Ashford','Romano','Silva','Kaplan','Mbeki','Duarte'];
+const PREF=['Hudson','Bowery','Astor','Delancey','Canal','Fulton','Bleecker','Lenox','Knickerbocker','Battery','Flatiron','Lafayette','Mott','Orchard','Mercer','Varick','Gramercy','Tompkins','Prospect','Bedford','Steinway','Ditmars','Grand','Atlantic','Nostrand','Halsey','Riverside','Amsterdam','Lexington','Houston','Spring','Cortlandt','Ellis','Pier 17','Union','Dyckman'];
+const SUFF={tech:['Labs','Systems','Robotics','Cloudworks','Data','Apps'],fin:['Capital','Partners','Lending','Trust','Advisors'],media:['Media','Pictures','Records','Press','Studios'],re:['Realty','Properties','Lofts','Development'],retail:['Bagels','Pizza Co.','Delicatessen','Sneakers','Coffee Roasters','Bodega Group','Goods'],bio:['Bio','Therapeutics','Genomics','Health']};
+
+/* ============ map geometry ============ */
+const BOROUGHS={
+ man:{n:'Manhattan',poly:[[452,603],[440,580],[452,530],[470,470],[494,405],[516,340],[540,270],[562,205],[582,152],[600,124],[614,132],[612,160],[600,215],[588,268],[574,325],[556,395],[534,465],[512,530],[494,585],[474,608]],lbl:[489,318,-71,20]},
+ brx:{n:'The Bronx',poly:[[622,126],[660,82],[740,62],[820,76],[862,128],[852,200],[792,246],[700,262],[624,262],[608,215]],lbl:[745,215,0,24]},
+ qns:{n:'Queens',poly:[[596,298],[662,286],[760,282],[862,258],[942,300],[962,420],[932,520],[852,560],[760,558],[700,520],[640,498],[588,470],[578,420],[586,360]],lbl:[790,385,0,30]},
+ bk:{n:'Brooklyn',poly:[[588,470],[640,498],[700,520],[760,558],[852,560],[842,640],[760,700],[660,732],[560,726],[502,692],[496,640],[518,600],[540,545],[562,498]],lbl:[690,600,0,30]},
+ si:{n:'Staten Island',poly:[[250,702],[322,652],[396,656],[428,706],[402,768],[312,790],[252,762]],lbl:[338,728,0,18]},
+ nj:{n:'Hudson Shore',poly:[[352,330],[496,322],[480,380],[458,445],[440,505],[424,570],[410,615],[372,640],[330,612],[322,500],[334,400]],lbl:[388,450,-80,20]}
+};
+const DECOR=[
+ [[0,0],[540,0],[575,110],[560,170],[520,250],[500,316],[352,326],[334,400],[322,500],[330,612],[300,640],[240,680],[0,700]],
+ [[600,0],[1000,0],[1000,150],[880,140],[862,124],[820,72],[740,58],[660,78],[622,122],[612,100],[605,40]],
+ [[946,300],[1000,290],[1000,620],[900,610],[856,564],[936,522],[966,420]],
+ [[0,705],[236,690],[248,770],[200,800],[0,800]]
+];
+const DIST=[
+ {id:'fidi',n:'Financial District',s:'FiDi',b:'man',p:[466,588],rent:1.8},
+ {id:'tribeca',n:'Tribeca & SoHo',s:'SoHo',b:'man',p:[478,548],rent:1.7},
+ {id:'village',n:'Greenwich Village',s:'Village',b:'man',p:[490,505],rent:1.5},
+ {id:'chelsea',n:'Chelsea',s:'Chelsea',b:'man',p:[502,462],rent:1.45},
+ {id:'midtown',n:'Midtown',s:'Midtown',b:'man',p:[520,410],rent:2},
+ {id:'uws',n:'Upper West Side',s:'UWS',b:'man',p:[528,345],rent:1.5},
+ {id:'ues',n:'Upper East Side',s:'UES',b:'man',p:[553,352],rent:1.7},
+ {id:'harlem',n:'Harlem',s:'Harlem',b:'man',p:[565,262],rent:1},
+ {id:'heights',n:'Washington Heights',s:'Heights',b:'man',p:[590,175],rent:.8},
+ {id:'riverdale',n:'Riverdale',s:'Riverdale',b:'brx',p:[650,108],rent:.8},
+ {id:'fordham',n:'Fordham',s:'Fordham',b:'brx',p:[728,168],rent:.7},
+ {id:'sbronx',n:'South Bronx',s:'S. Bronx',b:'brx',p:[668,230],rent:.65},
+ {id:'pelham',n:'Pelham Bay',s:'Pelham',b:'brx',p:[805,150],rent:.7},
+ {id:'astoria',n:'Astoria',s:'Astoria',b:'qns',p:[630,318],rent:.9},
+ {id:'lic',n:'Long Island City',s:'LIC',b:'qns',p:[612,402],rent:1.1},
+ {id:'flushing',n:'Flushing',s:'Flushing',b:'qns',p:[830,330],rent:.85},
+ {id:'fhills',n:'Forest Hills',s:'Forest Hills',b:'qns',p:[730,420],rent:.85},
+ {id:'jamaica',n:'Jamaica',s:'Jamaica',b:'qns',p:[862,482],rent:.7},
+ {id:'wburg',n:'Williamsburg',s:'W\'burg',b:'bk',p:[608,516],rent:1.2},
+ {id:'dumbo',n:'DUMBO & Downtown',s:'DUMBO',b:'bk',p:[552,580],rent:1.3},
+ {id:'bushwick',n:'Bushwick',s:'Bushwick',b:'bk',p:[702,562],rent:.85},
+ {id:'pslope',n:'Park Slope',s:'Park Slope',b:'bk',p:[585,642],rent:1.1},
+ {id:'flatbush',n:'Flatbush',s:'Flatbush',b:'bk',p:[705,642],rent:.75},
+ {id:'coney',n:'Coney Island',s:'Coney Is.',b:'bk',p:[642,706],rent:.6},
+ {id:'stgeorge',n:'St. George',s:'St. George',b:'si',p:[372,690],rent:.6},
+ {id:'totten',n:'Tottenville',s:'Tottenville',b:'si',p:[300,745],rent:.5},
+ {id:'hoboken',n:'Hoboken',s:'Hoboken',b:'nj',p:[455,372],rent:1},
+ {id:'jcity',n:'Jersey City',s:'Jersey City',b:'nj',p:[380,520],rent:.9}
+];
+const DM={}; DIST.forEach(d=>DM[d.id]=d);
+function clipHalf(poly,a,b){const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2,nx=b[0]-a[0],ny=b[1]-a[1];const inside=p=>(p[0]-mx)*nx+(p[1]-my)*ny<=0;const out=[];for(let i=0;i<poly.length;i++){const P=poly[i],Q=poly[(i+1)%poly.length];const pi=inside(P),qi=inside(Q);if(pi)out.push(P);if(pi!==qi){const dp=(P[0]-mx)*nx+(P[1]-my)*ny,dq=(Q[0]-mx)*nx+(Q[1]-my)*ny;const t=dp/(dp-dq);out.push([P[0]+(Q[0]-P[0])*t,P[1]+(Q[1]-P[1])*t])}}return out}
+function centroid(pts){let a=0,x=0,y=0;for(let i=0;i<pts.length;i++){const p=pts[i],q=pts[(i+1)%pts.length];const f=p[0]*q[1]-q[0]*p[1];a+=f;x+=(p[0]+q[0])*f;y+=(p[1]+q[1])*f}a/=2;return a?[x/(6*a),y/(6*a)]:pts[0]}
+function inPoly(p,poly){let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c}return c}
+DIST.forEach(d=>{let poly=BOROUGHS[d.b].poly.slice();DIST.forEach(o=>{if(o!==d&&o.b===d.b)poly=clipHalf(poly,d.p,o.p)});d.poly=poly;d.c=centroid(poly)});
+const pathOf=pts=>'M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join('L')+'Z';
+const BRIDGES=[[[476,596],[528,590]],[[488,575],[540,566]],[[524,470],[566,500]],[[548,392],[584,386]],[[600,205],[612,212]],[[580,160],[548,150]],[[423,702],[503,690]],[[586,290],[606,296]]];
+const FERRIES=[[[372,668],[420,640],[458,612]],[[470,612],[520,610],[560,600]],[[452,520],[440,470],[470,400]]];
+
+/* ============ state ============ */
+let S=null;
+const UI={panel:null,stock:null,qty:100,acqFilter:'avail',recFilter:null,ol:false,sel:null};
+const G={running:false,modal:false,prevSpeed:1,dayAcc:0};
+
+function newChar(o={}){
+ const fem=o.fem??R()<.45;const id='c'+(S.nextId++);
+ const c={id,fem,age:o.age??(27+Math.floor(R()*34)),seed:Math.floor(R()*1e9),name:o.name||((fem?pick(FIRST_F):pick(FIRST_M))+' '+pick(LAST)),traits:o.traits||rollTraits(),base:o.skill??(4+Math.floor(R()*11)),dept:o.dept||null,opinion:o.opinion??(5+Math.floor(R()*25)),praised:-9,bg:o.bg||null};
+ c.salary=o.salary??askSalary(c);S.chars[id]=c;return c}
+function rollTraits(){const ks=Object.keys(TRAITS);const n=R()<.35?1:2;const t=[];while(t.length<n){const k=pick(ks);if(!t.includes(k))t.push(k)}return t}
+function skillOf(c){let s=c.base;c.traits.forEach(t=>s+=TRAITS[t].s||0);return clamp(s,1,25)}
+function askSalary(c){let s=9000+skillOf(c)*2400;if(c.traits.includes('greedy'))s*=1.35;return Math.round(s/500)*500}
+const heads=()=>Object.keys(DEPTS).map(k=>S.co.depts[k].head).filter(Boolean).map(id=>S.chars[id]).filter(Boolean);
+const ceo=()=>S.chars[S.ceo];
+const cst=k=>ceo().st[k];
+const monthIdx=()=>{const d=new Date(S.date);return (d.getUTCFullYear()-2027)*12+d.getUTCMonth()};
+function coName(sector){return pick(PREF)+' '+pick(SUFF[sector])}
+
+function newGame(cfg){
+ R=Math.random;
+ S={v:1,nextId:1,date:Date.UTC(2027,0,1),speed:1,chars:{},mods:[],pending:[],cds:{},flags:{},log:[],won:{},hist:[]};
+ const sec=cfg.sector;
+ S.co={name:cfg.name,sector:sec,color:cfg.color,hq:cfg.hq,cash:25e6,rep:30,morale:55,quality:12,office:1,pay:'market',perks:{},ipo:false,depts:{},lastPL:null};
+ for(const k in DEPTS)S.co.depts[k]={head:null,staff:0};
+ Object.assign(S.co.depts.eng,{staff:3});Object.assign(S.co.depts.sales,{staff:3});S.co.depts.mkt.staff=1;S.co.depts.fin.staff=1;S.co.depts.hr.staff=1;S.co.depts.ops.staff=1;
+ const st={neg:8,fin:8,cha:8,cun:8,vis:8};
+ for(const [k,v] of Object.entries(EDU[cfg.edu].st))st[k]+=v;for(const [k,v] of Object.entries(PERS[cfg.pers].st))st[k]+=v;
+ const c=newChar({name:cfg.ceoName,fem:cfg.fem,age:34,traits:[],skill:12,opinion:100,salary:0});c.seed=cfg.seed;c.st=st;c.edu=cfg.edu;c.pers=cfg.pers;S.ceo=c.id;
+ const cof=newChar({dept:'eng',skill:9,traits:['loyal',pick(['visionary','diligent','workaholic'])],opinion:40});S.co.depts.eng.head=cof.id;
+ // rivals
+ const RV=[{id:'vh',name:'Vanderholt Holdings',short:'Vanderholt',color:'#e0566b',sector:'re',hq:['ues','midtown','fidi'],ceo:{name:'Cornelius Vanderholt',fem:false,age:67,traits:['greedy','paranoid']}},
+  {id:'ks',name:'Kestrel Capital',short:'Kestrel',color:'#3fcf8e',sector:'fin',hq:['fidi','midtown','hoboken'],ceo:{name:'Imani Okafor',fem:true,age:46,traits:['genius','ambitious']}},
+  {id:'ml',name:'Mercer-Liang Media',short:'Mercer-Liang',color:'#9b87ff',sector:'media',hq:['wburg','tribeca','lic'],ceo:{name:'Wen Liang',fem:false,age:39,traits:['charismatic','hothead']}}];
+ const used=new Set([cfg.hq]);
+ S.rivals=RV.map(r=>{const hq=r.hq.find(h=>!used.has(h));used.add(hq);const ch=newChar({...r.ceo,skill:15,opinion:-5+Math.floor(R()*20)});return{id:r.id,name:r.name,short:r.short,color:r.color,sector:r.sector,hq,ceo:ch.id,base:120e6+R()*120e6,cash:30e6+R()*20e6,aggr:.22+R()*.12}});
+ // small companies
+ S.smalls=[];const secs=Object.keys(SECTORS);let n=0;
+ const placeIn=(d,k)=>{const r2=rng(k*977+13);for(let i=0;i<14;i++){const a=r2()*6.283,rr=4+r2()*13;const p=[d.c[0]+Math.cos(a)*rr,d.c[1]+Math.sin(a)*rr];if(inPoly(p,d.poly))return p}return d.c.slice()};
+ const addSmall=did=>{const s=pick(secs);const d=DM[did];const rev=(40e3+R()*260e3)*(.6+d.rent*.45);const sm={id:'s'+(n++),name:coName(s),sector:s,d:did,rev,margin:.14+R()*.22,owner:null,cool:-1};sm.pos=placeIn(d,n);sm.price=smallPrice(sm);S.smalls.push(sm)};
+ DIST.forEach(d=>addSmall(d.id));for(let i=0;i<8;i++)addSmall(pick(['fidi','midtown','tribeca','wburg','lic','chelsea','dumbo','village']));
+ S.rivals.forEach(rv=>{const near=S.smalls.filter(s=>!s.owner).sort((a,b)=>dist(a.d,rv.hq)-dist(b.d,rv.hq)).slice(0,3);near.forEach(s=>s.owner=rv.id)});
+ // listed
+ const L=[['HDSN','Hudson Dynamics','tech','chelsea',84,22e6,.42],['ASTR','Astor Financial','fin','midtown',61,40e6,.26],['BWRY','Bowery Biolabs','bio','lic',23,9e6,.62],['KNCK','Knickerbocker Media','media','tribeca',37,14e6,.38],['FLTN','Fulton Realty Trust','re','dumbo',48,18e6,.22],['LNOX','Lenox Retail Group','retail','harlem',19,11e6,.34],['EMPR','Empire Gridworks','tech','hoboken',112,26e6,.36],['BTRY','Battery Park Bancorp','fin','fidi',73,30e6,.24],['DLNC','Delancey Foods','retail','village',14,7e6,.4],['MRCR','Mercer Genomics','bio','flushing',31,6e6,.7],['PRKR','Park Row Press','media','wburg',9,8e6,.45],['GRMC','Gramercy Estates','re','uws',56,12e6,.25]];
+ S.stocks=L.map(([t,nm,s,d,p,sh,v],i)=>{const st={t,n:nm,sector:s,d,price:p,shares:sh,vol:v,drift:.04+R()*.1,beta:.6+R()*.8,mo:0,hist:[],own:0,cost:0,ctrl:null,prev:p};let x=p;const h=[];for(let k=0;k<120;k++){x*=Math.exp(-st.drift/252+st.vol/15.9*gauss()*.9);h.unshift(x)}const f=p/h[h.length-1];st.hist=h.map(y=>y*f);st.pos=placeIn(DM[d],i+200);return st});
+ UI.stock=S.stocks[0].t;
+ S.cands=[];for(let i=0;i<6;i++)S.cands.push(newCand().id);
+ S.secShock={};S.mkt=0;
+ S.hist=[valuation()];
+}
+function newCand(dept,boost=0){const d=dept||pick(Object.keys(DEPTS));const c=newChar({dept:null,skill:4+Math.floor(R()*11)+boost,opinion:15+Math.floor(R()*20)});c.want=d;return c}
+const dist=(a,b)=>{const p=DM[a].c,q=DM[b].c;return Math.hypot(p[0]-q[0],p[1]-q[1])};
+function smallPrice(s){return Math.round((s.rev*12*s.margin*3.4+250e3)/1e4)*1e4}
+
+/* ============ economy ============ */
+function moraleMult(){return .6+S.co.morale/125}
+function deptEff(k){const d=S.co.depts[k];const h=d.head&&S.chars[d.head];const sk=h?skillOf(h):0;let e=d.staff*(.6+.07*sk)+(h?.5+sk*.08:0);e*=moraleMult();if(k==='sales'&&S.co.perks.remote)e*=.95;if(k==='fin'&&S.co.sector==='fin')e*=1.5;return e}
+const staffTotal=()=>Object.values(S.co.depts).reduce((a,d)=>a+d.staff,0);
+const headcount=()=>staffTotal()+heads().length+1;
+const staffCap=()=>4+S.co.office*4;
+function perkCost(k){const p=PERKS[k];if(p.pct)return 0;return p.flat+p.per*headcount()}
+function econ(){
+ const E={};for(const k in DEPTS)E[k]=deptEff(k);
+ const sec=SECTORS[S.co.sector],q=S.co.quality,rep=S.co.rep;
+ const repW=S.co.sector==='media'?1.4:1;
+ const core=sec.base*(E.sales+E.mkt*.45+.6)*(.4+q/60)*(.6+rep/100*repW);
+ let subs=0;S.smalls.forEach(s=>{if(s.owner==='you')subs+=s.rev*s.margin*(s.sector===S.co.sector?1.15:1)*(1+E.ops*.008)});
+ let ctrl=0;S.stocks.forEach(s=>{if(s.ctrl==='you')ctrl+=s.price*s.shares*.006});
+ const payM=PAY[S.co.pay].m;
+ const staffCost=staffTotal()*STAFF_SAL*payM*(S.co.union?1.05:1);
+ const headCost=heads().reduce((a,h)=>a+h.salary,0);
+ const rent=60000*S.co.office*DM[S.co.hq].rent;
+ let perks=0;for(const k in S.co.perks)if(S.co.perks[k])perks+=PERKS[k].pct?core*PERKS[k].pct:perkCost(k);
+ const opsSave=Math.min(.3,E.ops*.028);
+ const opex=(staffCost+headCost+rent+perks)*(1-opsSave);
+ const interest=S.co.cash>0?S.co.cash*.0015*(1+E.fin*.08):S.co.cash*.015;
+ const revenue=core+subs+ctrl;
+ return{E,core,subs,ctrl,staffCost,headCost,rent,perks,opsSave,opex,interest,revenue,profit:revenue+interest-opex}
+}
+const portfolioValue=()=>S.stocks.reduce((a,s)=>a+s.own*s.price,0);
+const subsValue=()=>S.smalls.reduce((a,s)=>a+(s.owner==='you'?s.price:0),0);
+function valuation(){const e=econ();const sec=SECTORS[S.co.sector];const op=Math.max(0,(e.core-e.opex*.7))*12*sec.mult*(.6+S.co.rep/100)*(.7+S.co.quality/200)+e.core*12*.8;return op+S.co.cash+portfolioValue()+subsValue()}
+function rivalVal(r){return r.base+r.cash+S.smalls.reduce((a,s)=>a+(s.owner===r.id?s.price*1.2:0),0)}
+function fee(){return Math.max(.001,.01-deptEff('fin')*.0006-(cst('fin')-8)*.0003)}
+
+function moraleParts(){
+ const E={hr:deptEff('hr')};const it=[['Baseline city grind',40]];
+ if(E.hr>0)it.push(['People & Culture team',E.hr*3.2]);
+ const pm=PAY[S.co.pay];if(pm.mor)it.push([pm.n+' pay',pm.mor]);
+ for(const k in S.co.perks)if(S.co.perks[k])it.push([PERKS[k].n,PERKS[k].mor]);
+ heads().forEach(h=>h.traits.forEach(t=>{if(TRAITS[t].mor)it.push([h.name.split(' ')[0]+' is '+TRAITS[t].n.toLowerCase(),TRAITS[t].mor])}));
+ const ch=(cst('cha')-10)*.7;if(ch)it.push(['CEO charisma',ch]);
+ if(ceo().pers==='ruthless')it.push(['Ruthless CEO',-2]);
+ const over=staffTotal()/(7*staffCap());if(over>.85)it.push(['Cramped office',-Math.round((over-.85)*30)]);
+ if(S.co.cash<0)it.push(['Payroll anxiety',-10]);
+ S.mods.forEach(m=>{if(m.mor)it.push([m.n,m.mor])});
+ return it}
+const moraleTarget=()=>clamp(moraleParts().reduce((a,b)=>a+b[1],0),0,100);
+function addMod(n,o){S.mods.push({n,...o})}
+
+/* ============ influence ============ */
+function influence(did){const p={};const add=(k,v)=>p[k]=(p[k]||0)+v;
+ if(S.co.hq===did)add('you',4);S.rivals.forEach(r=>{if(r.hq===did)add(r.id,4)});
+ S.smalls.forEach(s=>{if(s.d===did&&s.owner)add(s.owner,2)});S.stocks.forEach(s=>{if(s.d===did&&s.ctrl)add(s.ctrl,3)});
+ if(S.co.sector==='re'&&p.you)p.you+=1;return p}
+const owners={};
+function computeOwners(){DIST.forEach(d=>{const p=influence(d.id);let best=null,bv=0;for(const k in p){if(p[k]>bv||(p[k]===bv&&k===owners[d.id])){best=k;bv=p[k]}}owners[d.id]=best})}
+const colorOf=o=>o==='you'?S.co.color:(S.rivals.find(r=>r.id===o)||{}).color;
+const nameOf=o=>o==='you'?S.co.name:(S.rivals.find(r=>r.id===o)||{}).name;
+const myDistricts=()=>DIST.filter(d=>owners[d.id]==='you').length;
+
+/* ============ avatars ============ */
+const SKIN=['#f4d6bd','#ebbd9a','#d9a37a','#c08a5f','#9a6844','#74482c','#4f2f1e'];
+const HAIRC=['#16100d','#2b1b13','#46301f','#6b472a','#9c6c3c','#cf9f5c','#842f1f','#3a3a44'];
+const SUIT=['#1c2544','#23262f','#2e3140','#43282c','#1d3b3d','#3a2f52','#d9d2c3','#5a4630','#14161c'];
+const TIE=['#b2384a','#c9a45c','#2d6a8a','#6b3fa0','#2f8f7a','#d8643a','#e8e8e8','#1b1b24'];
+let AVID=0;
+function avatar(c,o={}){
+ const r=rng(c.seed);const P=a=>a[Math.floor(r()*a.length)];
+ const fem=c.fem,age=c.age;const skin=P(SKIN);let hc=P(HAIRC);
+ if(age>58)hc=r()<.6?'#c8c8d0':'#9b9ba6';else if(age>48&&r()<.45)hc='#7a7a84';else r();
+ const suit=P(SUIT),tie=P(TIE),eye=P(['#3b2a1e','#4a6b8a','#2f5d3a','#6b4a2a','#1e1e22']);
+ let hair=fem?P(['bob','long','bun','curly','afro','side','pixie','long']):P(['crop','side','slick','pomp','bald','buzz','curly','receding','side']);
+ if(!fem&&age>55&&r()<.4)hair=r()<.5?'bald':'receding';else{r();r()}
+ const beard=!fem&&r()<.4?P(['stache','goatee','full','stubble']):(r(),null);
+ const glasses=r()<.3?(r()<.5?'round':'rect'):(r(),null);
+ const collar=fem?P(['blouse','turtle','tie','open','blouse']):P(['tie','tie','tie','bow','turtle','open']);
+ const jw=20.5+r()*3.2,hh=25.5+r()*2.5,bAng=r()*2-1,sq=r()<.5,earring=fem&&r()<.6,psq=r()<.5;
+ const mood=clamp(o.mood??0,-1,1);const bg=o.bg||'#2a3566';const id='a'+(AVID++);const dl=(r()*6).toFixed(2);
+ const L=50-jw,Rr=50+jw;const dark='rgba(0,0,0,.22)';
+ let back='',front='';
+ const cap=(top=8,hl=31,op=1)=>`<path d="M${L-1} 50C${L-3} ${top} ${Rr+3} ${top} ${Rr+1} 50C${Rr-2} 38 60 ${hl} 50 ${hl}C40 ${hl} ${L+2} 38 ${L-1} 50Z" fill="${hc}" fill-opacity="${op}"/>`;
+ switch(hair){
+  case'crop':front=cap();break;
+  case'side':front=cap()+`<path d="M${L+1} 40C34 22 60 16 ${Rr+2} 33C62 27 46 28 ${L+2} 42Z" fill="${hc}"/><path d="M40 26C48 22 58 23 64 27" stroke="rgba(255,255,255,.18)" stroke-width="1.2" fill="none"/>`;break;
+  case'slick':front=cap(9,28)+`<path d="M38 22C46 18 58 18 64 22M36 26C46 22 58 22 66 26" stroke="rgba(255,255,255,.22)" stroke-width="1" fill="none"/>`;break;
+  case'pomp':front=`<path d="M${L-1} 50C${L-6} 20 38 4 56 6C74 8 ${Rr+6} 24 ${Rr+1} 50C${Rr-2} 37 61 30 50 30C39 30 ${L+2} 38 ${L-1} 50Z" fill="${hc}"/><path d="M42 12C50 8 60 10 66 16" stroke="rgba(255,255,255,.2)" stroke-width="1.3" fill="none"/>`;break;
+  case'buzz':front=cap(10,30,.55);break;
+  case'bald':front=`<path d="M${L} 54C${L-1} 45 ${L+1} 40 ${L+4} 37L${L+5} 55Z M${Rr} 54C${Rr+1} 45 ${Rr-1} 40 ${Rr-4} 37L${Rr-5} 55Z" fill="${hc}"/><ellipse cx="43" cy="30" rx="7" ry="3" fill="rgba(255,255,255,.14)" transform="rotate(-20 43 30)"/>`;break;
+  case'receding':front=`<path d="M${L} 54C${L-2} 40 ${L+2} 32 ${L+6} 29L${L+7} 52Z M${Rr} 54C${Rr+2} 40 ${Rr-2} 32 ${Rr-6} 29L${Rr-7} 52Z M44 25C48 23 52 23 56 25C52 27 48 27 44 25Z" fill="${hc}"/>`;break;
+  case'curly':{let s='';for(let a=196;a<=344;a+=16){const t=a*Math.PI/180;s+=`<circle cx="${(50+(jw+1)*Math.cos(t)).toFixed(1)}" cy="${(46+25*Math.sin(t)).toFixed(1)}" r="6.2" fill="${hc}"/>`}front=cap(12,32)+s;break}
+  case'afro':back=`<ellipse cx="50" cy="40" rx="${jw+12}" ry="30" fill="${hc}"/>`;front=cap(10,32);break;
+  case'bob':back=`<path d="M${L-3} 50C${L-6} 14 ${Rr+6} 14 ${Rr+3} 50L${Rr+5} 76C${Rr-2} 81 63 79 61 74L39 74C37 79 ${L+2} 81 ${L-5} 76Z" fill="${hc}"/>`;front=`<path d="M${L} 48C${L-2} 20 ${Rr+2} 18 ${Rr} 46C${Rr-6} 33 56 29 47 31C39 33 ${L+4} 38 ${L} 48Z" fill="${hc}"/>`;break;
+  case'long':back=`<path d="M${L-3} 50C${L-8} 12 ${Rr+8} 12 ${Rr+3} 50L${Rr+8} 98C${Rr} 102 64 100 61 92L39 92C36 100 ${L} 102 ${L-8} 98Z" fill="${hc}"/>`;front=`<path d="M${L} 50C${L-2} 18 ${Rr+3} 18 ${Rr} 48C${Rr-4} 32 60 27 52 28C44 30 ${L+3} 40 ${L} 50Z" fill="${hc}"/>`;break;
+  case'bun':front=`<circle cx="50" cy="16" r="9" fill="${hc}"/>`+cap(10,31);break;
+  case'pixie':front=cap(9,33)+`<path d="M${L+1} 44C36 24 58 18 ${Rr+1} 36C58 30 44 32 ${L+3} 46Z" fill="${hc}"/>`;break;
+ }
+ let body=`<path d="M4 122C6 99 23 88 42 85L50 100L58 85C77 88 94 99 96 122Z" fill="${suit}"/>`;
+ let shirt='';
+ if(collar==='tie')shirt=`<path d="M42 84L50 100L58 84L54 82L50 88L46 82Z" fill="#f2f0ea"/><path d="M48.4 89H51.6L53.2 92L51.6 112L50 116L48.4 112L46.8 92Z" fill="${tie}"/><rect x="47.8" y="88" width="4.4" height="4" rx="1" fill="${tie}" stroke="rgba(0,0,0,.25)" stroke-width=".5"/>`;
+ else if(collar==='bow')shirt=`<path d="M42 84L50 100L58 84L54 82L50 88L46 82Z" fill="#f2f0ea"/><path d="M44 88L50 91L44 94ZM56 88L50 91L56 94Z" fill="${tie}"/><circle cx="50" cy="91" r="1.4" fill="${tie}"/>`;
+ else if(collar==='turtle')shirt=`<path d="M42 78Q50 82 58 78L58 88L50 100L42 88Z" fill="#191b24"/>`;
+ else if(collar==='open')shirt=`<path d="M42 84L50 100L58 84L55 82L50 95L45 82Z" fill="#e8eef6"/><path d="M45 84L50 95L55 84Z" fill="${skin}"/>`;
+ else shirt=`<path d="M42 84L50 102L58 84Z" fill="${skin}"/><path d="M43 85Q50 96 57 85" stroke="#e6c07a" stroke-width=".9" fill="none" stroke-dasharray="1 1.6"/>`;
+ const lap=`<path d="M42 85L50 100L44 110L37 90Z M58 85L50 100L56 110L63 90Z" fill="rgba(0,0,0,.2)"/>`+(psq?`<path d="M70 99L78 98L76 102Z" fill="${tie}"/>`:'');
+ const neck=`<path d="M43 64L43 86Q50 92 57 86L57 64Z" fill="${skin}"/><path d="M43 74Q50 80 57 74L57 70L43 70Z" fill="${dark}"/>`;
+ const ears=`<ellipse cx="${L+.5}" cy="53" rx="3.6" ry="5.6" fill="${skin}"/><ellipse cx="${Rr-.5}" cy="53" rx="3.6" ry="5.6" fill="${skin}"/>`+(earring?`<circle cx="${L}" cy="59.5" r="1.5" fill="#e6c07a"/><circle cx="${Rr}" cy="59.5" r="1.5" fill="#e6c07a"/>`:'');
+ const head=`<ellipse cx="50" cy="50" rx="${jw}" ry="${hh}" fill="${skin}"/>`+(sq?`<path d="M${L+1} 56Q${L+3} 74 50 ${50+hh}Q${Rr-3} 74 ${Rr-1} 56Q${Rr} 70 50 ${49+hh}Q${L} 70 ${L+1} 56Z" fill="${dark}" opacity=".5"/>`:`<path d="M${L+2} 58Q50 ${52+hh+2} ${Rr-2} 58Q50 ${50+hh-1} ${L+2} 58Z" fill="${dark}" opacity=".45"/>`);
+ const by=46+(-mood*.6),ba=bAng-(mood<-.3?1.6:0);
+ const brows=`<path d="M35.5 ${by+ba}Q41 ${by-3} 46 ${by-.3}" stroke="${hc}" stroke-width="${fem?1.2:1.9}" fill="none" stroke-linecap="round"/><path d="M64.5 ${by+ba}Q59 ${by-3} 54 ${by-.3}" stroke="${hc}" stroke-width="${fem?1.2:1.9}" fill="none" stroke-linecap="round"/>`;
+ const eyes=`<g class="eyes" style="animation-delay:${dl}s"><ellipse cx="41" cy="51" rx="3.7" ry="2.3" fill="#f7f5f0"/><ellipse cx="59" cy="51" rx="3.7" ry="2.3" fill="#f7f5f0"/><circle cx="41.4" cy="51.3" r="1.75" fill="${eye}"/><circle cx="59.4" cy="51.3" r="1.75" fill="${eye}"/><circle cx="42" cy="50.7" r=".5" fill="#fff"/><circle cx="60" cy="50.7" r=".5" fill="#fff"/>${fem?`<path d="M37 50.2Q41 47.8 45 50.2M55 50.2Q59 47.8 63 50.2" stroke="#1a1214" stroke-width="1" fill="none"/>`:''}</g>`;
+ const nose=`<path d="M50 53Q47.4 60 48.6 62.4Q50.5 63.6 52.6 62.2" stroke="rgba(60,30,20,.45)" stroke-width="1.1" fill="none" stroke-linecap="round"/>`;
+ const my=68.5,mc=my+mood*3.6;
+ const mouth=fem?`<path d="M44.5 ${my}Q50 ${mc+2.2} 55.5 ${my}Q50 ${mc+.4} 44.5 ${my}Z" fill="#a8424e"/><path d="M44.5 ${my}Q50 ${my-1.8} 55.5 ${my}" stroke="#a8424e" stroke-width="1.1" fill="none"/>`:`<path d="M44.5 ${my}Q50 ${mc+1} 55.5 ${my}" stroke="#6a3a33" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+ let fh='';
+ const stache=`<path d="M42.5 66.5C45 63.3 49 64 50 65.2C51 64 55 63.3 57.5 66.5C54 65.6 51 66.6 50 66.6C49 66.6 46 65.6 42.5 66.5Z" fill="${hc}"/>`;
+ if(beard==='full')fh=`<path d="M${L+.5} 52C${L} 72 40 ${50+hh+3} 50 ${50+hh+3}C60 ${50+hh+3} ${Rr} 72 ${Rr-.5} 52C${Rr-3} 64 60 72 50 72C40 72 ${L+3} 64 ${L+.5} 52Z" fill="${hc}"/>`+stache;
+ else if(beard==='stubble')fh=`<path d="M${L+.5} 54C${L} 72 40 ${50+hh+1} 50 ${50+hh+1}C60 ${50+hh+1} ${Rr} 72 ${Rr-.5} 54C${Rr-3} 64 60 72 50 72C40 72 ${L+3} 64 ${L+.5} 54Z" fill="${hc}" opacity=".28"/>`;
+ else if(beard==='goatee')fh=`<path d="M45.5 71.5Q50 ${50+hh+3} 54.5 71.5Q50 74.5 45.5 71.5Z" fill="${hc}"/>`+stache;
+ else if(beard==='stache')fh=stache;
+ const wr=age>50?`<path d="M33.5 51l-2.4-1.3M66.5 51l2.4-1.3M41 36q9-2 18 0M43 39q7-1.4 14 0M43 61q-2 3-1 6M57 61q2 3 1 6" stroke="rgba(60,30,20,.3)" stroke-width=".8" fill="none"/>`:'';
+ let gl='';
+ if(glasses==='round')gl=`<g stroke="${r()<.5?'#d8b26a':'#1a1a1e'}" stroke-width="1.2" fill="rgba(200,220,255,.08)"><circle cx="41" cy="51.2" r="5.6"/><circle cx="59" cy="51.2" r="5.6"/><path d="M46.6 51Q50 49 53.4 51M35.4 50L${L+1} 48.5M64.6 50L${Rr-1} 48.5" fill="none"/></g>`;
+ else if(glasses==='rect')gl=`<g stroke="#15151a" stroke-width="1.4" fill="rgba(200,220,255,.08)"><rect x="34.5" y="47" width="13" height="8.4" rx="1.8"/><rect x="52.5" y="47" width="13" height="8.4" rx="1.8"/><path d="M47.5 50.5H52.5M34.5 50L${L+1} 48.5M65.5 50L${Rr-1} 48.5" fill="none"/></g>`;
+ let rays='';for(let i=0;i<9;i++){const a=(-160+i*17.5)*Math.PI/180;rays+=`<path d="M50 124L${(50+Math.cos(a-.04)*140).toFixed(0)} ${(124+Math.sin(a-.04)*140).toFixed(0)}L${(50+Math.cos(a+.04)*140).toFixed(0)} ${(124+Math.sin(a+.04)*140).toFixed(0)}Z" fill="#fff" opacity=".045"/>`}
+ return `<svg class="av" viewBox="0 0 100 120" aria-hidden="true"><defs><radialGradient id="${id}" cx="50%" cy="38%" r="75%"><stop offset="0" stop-color="${bg}" stop-opacity=".95"/><stop offset="1" stop-color="#0a0f22"/></radialGradient><linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient></defs><rect width="100" height="120" fill="url(#${id})"/>${rays}<g class="fig">${back}${neck}${body}${lap}${shirt}${ears}${head}${wr}${fh}${brows}${eyes}${nose}${mouth}${front}${gl}</g><rect width="100" height="120" fill="url(#${id}s)"/></svg>`;
+}
+const moodOf=c=>S&&c.id===S.ceo?.4:clamp((c.opinion??0)/60,-1,1);
+const deptBg=c=>c.dept?DEPTS[c.dept].col:(c.want?DEPTS[c.want].col:(c.bg||'#3a4a8a'));
+function portrait(c,w,cls=''){return `<div class="frame ${cls}" style="width:${w}px"><div>${avatar(c,{mood:moodOf(c),bg:shade(deptBg(c))})}</div></div>`}
+function shade(hex){const n=parseInt(hex.slice(1),16);const r=(n>>16)&255,g=(n>>8)&255,b=n&255;return `rgb(${Math.round(r*.55)},${Math.round(g*.55)},${Math.round(b*.6+20)})`}
+
+/* ============ map rendering ============ */
+const NS='http://www.w3.org/2000/svg';
+const svg=$('#map');
+const VB={x:240,y:60,w:740,h:500},VT={x:240,y:60,w:740};
+let appW=innerWidth,appH=innerHeight;
+function buildMap(){
+ let h=`<defs>
+  <pattern id="waves" width="40" height="14" patternUnits="userSpaceOnUse"><path d="M0 7Q10 3 20 7T40 7" stroke="#2a4a86" stroke-width=".6" fill="none" opacity=".45"/><animateTransform attributeName="patternTransform" type="translate" from="0 0" to="40 0" dur="9s" repeatCount="indefinite"/></pattern>
+  <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0V6" stroke="#2a3460" stroke-width="1"/></pattern>
+  <radialGradient id="sea" cx="55%" cy="45%" r="70%"><stop offset="0" stop-color="#13285a"/><stop offset="1" stop-color="#091228"/></radialGradient>
+  <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
+ </defs>
+ <rect x="-600" y="-600" width="2200" height="2000" fill="url(#sea)"/>
+ <rect x="-600" y="-600" width="2200" height="2000" fill="url(#waves)"/>
+ <g opacity=".2" stroke="#4a68b0" stroke-width=".4">${Array.from({length:12},(_,i)=>`<path d="M${i*100-100} -200V1000"/>`).join('')}${Array.from({length:10},(_,i)=>`<path d="M-200 ${i*100}H1200"/>`).join('')}</g>`;
+ DECOR.forEach(p=>h+=`<path d="${pathOf(p)}" fill="#141c38"/><path d="${pathOf(p)}" fill="url(#hatch)" opacity=".5"/>`);
+ for(const k in BOROUGHS)h+=`<path d="${pathOf(BOROUGHS[k].poly)}" fill="none" stroke="#45d6c1" stroke-opacity=".16" stroke-width="7"/>`;
+ h+=`<g id="gDist">`;DIST.forEach(d=>h+=`<path class="dist" data-d="${d.id}" d="${pathOf(d.poly)}" fill="#1b2547"/>`);h+=`</g>`;
+ for(const k in BOROUGHS)h+=`<path d="${pathOf(BOROUGHS[k].poly)}" fill="none" stroke="#7d8fd6" stroke-opacity=".6" stroke-width="1.3" pointer-events="none"/>`;
+ h+=`<g pointer-events="none">`;BRIDGES.forEach(b=>h+=`<path d="M${b[0][0]} ${b[0][1]}L${b[1][0]} ${b[1][1]}" stroke="#c9b37a" stroke-width="2" stroke-opacity=".55"/><path d="M${b[0][0]} ${b[0][1]}L${b[1][0]} ${b[1][1]}" stroke="#0b1730" stroke-width=".6"/>`);h+=`</g>`;
+ for(const k in BOROUGHS){const b=BOROUGHS[k].lbl;h+=`<text class="blabel" x="${b[0]}" y="${b[1]}" font-size="${b[3]}" text-anchor="middle" transform="rotate(${b[2]} ${b[0]} ${b[1]})">${BOROUGHS[k].n.toUpperCase()}</text>`}
+ h+=`<g transform="translate(440 640)" pointer-events="none"><circle r="4" fill="#1d3b3d" stroke="#45d6c1" stroke-opacity=".5"/><path d="M0 -2V-11M-2 -9L0 -13L2 -9" stroke="#7fe8d3" stroke-width="1.2" fill="none"/></g>`;
+ h+=`<g id="gLights" pointer-events="none"></g><g id="gFx" pointer-events="none"></g><g id="gMarkers"></g><g id="gLabels" pointer-events="none"></g>`;
+ h+=`<g transform="translate(70 560)" opacity=".55" pointer-events="none"><circle r="34" fill="none" stroke="#c9a45c" stroke-width=".8"/><circle r="27" fill="none" stroke="#c9a45c" stroke-width=".4"/><path d="M0 -40L5 0L0 40L-5 0ZM-40 0L0 5L40 0L0 -5Z" fill="#c9a45c" opacity=".55"/><text y="-44" text-anchor="middle" font-family="Bodoni Moda,serif" font-size="10" fill="#e6c07a">N</text></g>`;
+ h+=`<text x="60" y="660" font-family="Bodoni Moda,serif" font-style="italic" font-size="22" fill="#e6c07a" opacity=".55" pointer-events="none">The City of New York</text><text x="60" y="676" font-family="Josefin Sans,sans-serif" font-size="8" letter-spacing="3" fill="#97a0c6" opacity=".6" pointer-events="none">FIVE BOROUGHS · HUDSON SHORE · MMXXVII</text>`;
+ svg.innerHTML=h;
+ const gl=$('#gLabels');DIST.forEach(d=>{const t=document.createElementNS(NS,'text');t.setAttribute('class','dlabel');t.setAttribute('x',d.c[0].toFixed(1));t.setAttribute('y',(d.c[1]+3).toFixed(1));t.setAttribute('text-anchor','middle');t.setAttribute('font-size',d.b==='man'?'7.5':'8.5');t.textContent=d.s;gl.appendChild(t)});
+ const lg=$('#gLights');let lh='';BRIDGES.forEach((b,i)=>{for(let k=0;k<3;k++)lh+=`<circle r="1.1" fill="${k%2?'#ffe3a1':'#ff8a7a'}" data-b="${i}" data-o="${k/3}"/>`});
+ FERRIES.forEach((f,i)=>lh+=`<g data-f="${i}"><path d="M-4 0L3 -1.6L5 0L3 1.6Z" fill="#e8eaf6"/><path d="M-4 0L-12 -2.5M-4 0L-12 2.5" stroke="#9fb4ff" stroke-width=".5" opacity=".5"/></g>`);
+ lg.innerHTML=lh;
+}
+function towerPath(h){return `M-4 0V-${h*.55}L-2.6 -${h*.62}V-${h*.8}L0 -${h}L2.6 -${h*.8}V-${h*.62}L4 -${h*.55}V0Z`}
+function renderMarkers(){
+ let h='';
+ S.smalls.forEach(s=>{const col=s.owner?colorOf(s.owner):'#d6dcf5';h+=`<g class="marker" data-act="small" data-id="${s.id}" transform="translate(${s.pos[0].toFixed(1)} ${s.pos[1].toFixed(1)})"><g class="mk"><path d="M0 -4.2L4.2 0L0 4.2L-4.2 0Z" fill="${col}" stroke="#0a0f22" stroke-width="1"/></g></g>`});
+ S.stocks.forEach(s=>{const col=s.ctrl?colorOf(s.ctrl):'#b9c3e8';h+=`<g class="marker" data-act="stockmap" data-id="${s.t}" transform="translate(${s.pos[0].toFixed(1)} ${s.pos[1].toFixed(1)})"><g class="mk"><path class="tower" d="${towerPath(15)}" fill="${col}" stroke="#0a0f22" stroke-width=".8"/><path d="M-1.5 -4V-7M1.5 -4V-7M-1.5 -9V-11M1.5 -9V-11" stroke="#0a0f22" stroke-width=".7" opacity=".6"/></g></g>`});
+ const hq=(did,col,big,lab)=>{const c=DM[did].c;return `<g class="marker" data-act="dist" data-id="${did}" transform="translate(${c[0].toFixed(1)} ${(c[1]-3).toFixed(1)})"><g class="mk"><circle r="10" fill="${col}" opacity=".35" filter="url(#glow)"/><path class="tower" d="${towerPath(big)}" fill="${col}" stroke="#0a0f22" stroke-width="1"/><path d="M-1.6 -5V-${big*.5}M1.6 -5V-${big*.5}" stroke="#0a0f22" stroke-width=".8" opacity=".55"/><text y="7" text-anchor="middle" font-size="5" font-family="Josefin Sans,sans-serif" font-weight="700" letter-spacing=".8" fill="#fff" stroke="#0a0f22" stroke-width="1.6" paint-order="stroke">${esc(lab)}</text></g></g>`};
+ S.rivals.forEach(r=>h+=hq(r.hq,r.color,24,r.short.toUpperCase()));
+ h+=hq(S.co.hq,S.co.color,28,'HQ');
+ $('#gMarkers').innerHTML=h;scaleMarkers(true);
+}
+let lastScale=0;
+function scaleMarkers(force){const k=clamp(VB.w/760,.55,1.5);if(!force&&Math.abs(k-lastScale)<.02)return;lastScale=k;document.querySelectorAll('#gMarkers .mk').forEach(m=>m.setAttribute('transform',`scale(${k.toFixed(3)})`));const fs=document.querySelectorAll('#gLabels .dlabel');const op=VB.w>900?.0:VB.w>700?.75:1;fs.forEach(t=>t.style.opacity=op)}
+function paintDistricts(){computeOwners();document.querySelectorAll('.dist').forEach(p=>{const o=owners[p.dataset.d];if(o){p.style.fill=colorOf(o);p.style.fillOpacity=o==='you'?.62:.5}else{p.style.fill='#2a3666';p.style.fillOpacity=1}p.classList.toggle('sel',UI.sel===p.dataset.d)})}
+function fitVB(){VB.h=VB.w*appH/appW;svg.setAttribute('viewBox',`${VB.x.toFixed(2)} ${VB.y.toFixed(2)} ${VB.w.toFixed(2)} ${VB.h.toFixed(2)}`)}
+function flyTo(x,y,w){VT.w=clamp(w??VT.w,180,1300);const h=VT.w*appH/appW;VT.x=x-VT.w/2;VT.y=y-h/2}
+function animMap(dt,now){
+ const t=1-Math.pow(.0015,dt/1000);
+ const nw=lerp(VB.w,VT.w,t);VB.x=lerp(VB.x,VT.x,t);VB.y=lerp(VB.y,VT.y,t);VB.w=nw;fitVB();scaleMarkers();
+ const tt=now/1000;
+ document.querySelectorAll('#gLights circle').forEach(c=>{const b=BRIDGES[c.dataset.b];const f=(tt*.12+ +c.dataset.o)%1;const dir=+c.dataset.b%2?f:1-f;c.setAttribute('cx',lerp(b[0][0],b[1][0],dir));c.setAttribute('cy',lerp(b[0][1],b[1][1],dir))});
+ document.querySelectorAll('#gLights [data-f]').forEach(g=>{const f=FERRIES[g.dataset.f];let u=(tt*.025+ +g.dataset.f*.33)%2;const back=u>1;u=back?2-u:u;const s=u<.5?0:1;const lu=(u-s*.5)*2;const a=f[s],b=f[s+1];const x=lerp(a[0],b[0],lu),y=lerp(a[1],b[1],lu);let ang=Math.atan2(b[1]-a[1],b[0]-a[0])*180/Math.PI;if(back)ang+=180;g.setAttribute('transform',`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${ang.toFixed(0)})`)});
+}
+function fxPulse(did,col){const c=DM[did].c;const g=$('#gFx');const el=document.createElementNS(NS,'g');el.innerHTML=`<circle cx="${c[0]}" cy="${c[1]}" r="4" fill="none" stroke="${col}" stroke-width="2"><animate attributeName="r" from="4" to="46" dur="1.6s" fill="freeze" calcMode="spline" keySplines=".2 .9 .25 1" keyTimes="0;1"/><animate attributeName="opacity" from="1" to="0" dur="1.6s" fill="freeze"/></circle><circle cx="${c[0]}" cy="${c[1]}" r="4" fill="none" stroke="${col}" stroke-width="1"><animate attributeName="r" from="4" to="30" dur="1.6s" begin=".25s" fill="freeze"/><animate attributeName="opacity" from="1" to="0" dur="1.6s" begin=".25s" fill="freeze"/></circle>`;g.appendChild(el);setTimeout(()=>el.remove(),2100)}
+function fxArc(from,to,col){const a=DM[from].c,b=DM[to].c;const mx=(a[0]+b[0])/2,my=(a[1]+b[1])/2-Math.hypot(b[0]-a[0],b[1]-a[1])*.35;const p=document.createElementNS(NS,'path');p.setAttribute('d',`M${a[0]} ${a[1]}Q${mx} ${my} ${b[0]} ${b[1]}`);p.setAttribute('fill','none');p.setAttribute('stroke',col);p.setAttribute('stroke-width','2');p.setAttribute('stroke-linecap','round');const L=p.getTotalLength?0:0;$('#gFx').appendChild(p);const len=p.getTotalLength();p.style.strokeDasharray=len;p.style.strokeDashoffset=len;p.style.transition='stroke-dashoffset 1.1s cubic-bezier(.22,.9,.24,1), opacity .8s 1.4s';requestAnimationFrame(()=>requestAnimationFrame(()=>{p.style.strokeDashoffset=0;p.style.opacity=0}));setTimeout(()=>{p.remove();fxPulse(to,col)},1000);setTimeout(()=>p.remove(),2600)}
+
+/* pointer: pan / zoom / click (rotation-aware) */
+let rot=false;
+function local(e){return rot?[e.clientY,innerWidth-e.clientX]:[e.clientX,e.clientY]}
+function toMap(l){return[VB.x+l[0]*VB.w/appW,VB.y+l[1]*VB.h/appH]}
+const ptrs=new Map();let drag=null,pinch=null;
+svg.addEventListener('pointerdown',e=>{svg.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,local(e));if(ptrs.size===1){drag={start:local(e),vx:VT.x,vy:VT.y,moved:false}}else if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),w:VT.w};drag=null}});
+svg.addEventListener('pointermove',e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,local(e));
+ if(pinch&&ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a[0]-b[0],a[1]-b[1]);const mid=[(a[0]+b[0])/2,(a[1]+b[1])/2];const m=toMap(mid);const nw=clamp(pinch.w*pinch.d/d,180,1300);zoomAround(m,mid,nw,true);return}
+ if(!drag)return;const l=local(e);const dx=l[0]-drag.start[0],dy=l[1]-drag.start[1];if(Math.hypot(dx,dy)>5){drag.moved=true;svg.classList.add('drag')}
+ if(drag.moved){VT.x=drag.vx-dx*VB.w/appW;VT.y=drag.vy-dy*VB.h/appH;VB.x=VT.x;VB.y=VT.y}});
+const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;if(drag&&!drag.moved&&ptrs.size===0){const t=document.elementFromPoint(e.clientX,e.clientY);const m=t&&t.closest('[data-act]');if(m)handleAct(m);else{const d=t&&t.closest('.dist');if(d)selectDistrict(d.dataset.d);else selectDistrict(null)}}if(ptrs.size===0){drag=null;svg.classList.remove('drag')}};
+svg.addEventListener('pointerup',endPtr);svg.addEventListener('pointercancel',e=>{ptrs.delete(e.pointerId);drag=null;pinch=null;svg.classList.remove('drag')});
+svg.addEventListener('wheel',e=>{e.preventDefault();const l=local(e);const m=toMap(l);const nw=clamp(VT.w*Math.pow(1.0018,e.deltaY),180,1300);zoomAround(m,l,nw)},{passive:false});
+function zoomAround(m,l,nw,instant){VT.w=nw;const nh=nw*appH/appW;VT.x=m[0]-l[0]*nw/appW;VT.y=m[1]-l[1]*nh/appH;if(instant){VB.w=VT.w;VB.x=VT.x;VB.y=VT.y}}
+
+/* ============ orientation ============ */
+let rotPref='auto';try{rotPref=localStorage.getItem('md_rot')||'auto'}catch(e){}
+function applyOrientation(){
+ const portrait=innerHeight>innerWidth;
+ rot=rotPref==='on'?true:rotPref==='off'?false:portrait;
+ const app=$('#app');app.classList.toggle('rot',rot);
+ if(rot){app.style.width=innerHeight+'px';app.style.height=innerWidth+'px';app.style.left=innerWidth+'px';appW=innerHeight;appH=innerWidth}
+ else{app.style.width=innerWidth+'px';app.style.height=innerHeight+'px';app.style.left='0px';appW=innerWidth;appH=innerHeight}
+ app.classList.toggle('short',appH<=520);app.classList.toggle('w1100',appW<1100);app.classList.toggle('w900',appW<900);app.classList.toggle('w700',appW<700);document.querySelector('#rotBtn').style.color=rotPref==='auto'?'':'var(--teal)';
+ VT.h=VT.w*appH/appW;fitVB();
+}
+addEventListener('resize',applyOrientation);
+function cycleRot(){rotPref=rotPref==='auto'?(rot?'off':'on'):'auto';try{localStorage.setItem('md_rot',rotPref)}catch(e){}applyOrientation();toast(rotPref==='auto'?'Screen follows device: sideways whenever held upright.':rotPref==='on'?'Screen locked sideways.':'Sideways rotation off.')}
+
+/* ============ top bar / tweens ============ */
+const TW={};
+function tw(key,val,fmt){if(!TW[key])TW[key]={cur:val,t:val,fmt};TW[key].t=val;TW[key].fmt=fmt}
+function tweenTick(dt){const k=1-Math.pow(.004,dt/1000);for(const key in TW){const o=TW[key];if(Math.abs(o.cur-o.t)<1e-6&&o.done)continue;o.cur=Math.abs(o.t-o.cur)<Math.abs(o.t)*.0005+.01?o.t:lerp(o.cur,o.t,k);o.done=o.cur===o.t;const el=document.getElementById('tw_'+key);if(el)el.textContent=o.fmt(o.cur)}}
+function buildTop(){
+ const ch=(k,ic,lbl,cls='',tip='')=>`<div class="chip ${cls}" title="${tip}">${icon(ic,'var(--brass)')}<div><div class="k">${lbl}</div><div class="v" id="tw_${k}">–</div></div></div>`;
+ $('#res').innerHTML=ch('cash','cash','Cash','','Cash on hand')+ch('profit','profit','Monthly','','Projected monthly profit')+ch('val','val','Valuation','','What your company is worth')+ch('morale','morale','Morale','','Company happiness (0–100)')+ch('rep','rep','Reputation','opt','Reputation (0–100)')+ch('qual','quality','Quality','opt','Product quality (0–100)')+ch('dist','map','Districts','','Districts you control');
+ $('#nav').innerHTML=[['company','Company'],['recruit','Recruit'],['market','Market'],['acquire','Acquire'],['morale','Morale'],['rivals','Rivals'],['decisions','Decide']].map(([k,l])=>`<button class="navb" data-act="nav" data-v="${k}" id="nav_${k}" title="${l}">${icon(k)}<span>${l}</span></button>`).join('');
+}
+function updateTop(){S.co.morale=clamp(S.co.morale,0,100);
+ const e=econ();S._e=e;S._val=valuation();
+ tw('cash',S.co.cash,fmt$);tw('profit',e.profit,v=>sgn(v));tw('val',S._val,fmt$);tw('morale',S.co.morale,v=>Math.round(v));tw('rep',S.co.rep,v=>Math.round(v));tw('qual',S.co.quality,v=>Math.round(v));tw('dist',myDistricts(),v=>Math.round(v)+'/'+DIST.length);
+ const pe=document.getElementById('tw_profit');if(pe)pe.className='v '+(e.profit>=0?'good':'bad');
+ const ce=document.getElementById('tw_cash');if(ce)ce.className='v '+(S.co.cash>=0?'':'bad');
+ const d=new Date(S.date);$('#date').textContent=d.getUTCDate()+' '+MONTHS[d.getUTCMonth()]+' '+d.getUTCFullYear();
+ document.querySelectorAll('#speeds button').forEach(b=>b.classList.toggle('on',+b.dataset.v===S.speed));
+}
+function buildTicker(){const one=S.stocks.map(s=>`<span class="tk" data-t="${s.t}"><b>${s.t}</b><span class="tp"></span><span class="tc"></span></span>`).join('');$('#tickTrack').innerHTML=one+one;updTicker()}
+function updTicker(){document.querySelectorAll('.tk').forEach(el=>{const s=S.stocks.find(x=>x.t===el.dataset.t);if(!s)return;const ch=s.price/s.prev-1;el.querySelector('.tp').textContent=s.price.toFixed(2);const c=el.querySelector('.tc');c.textContent=(ch>=0?'▲ ':'▼ ')+Math.abs(ch*100).toFixed(2)+'%';c.style.color=ch>=0?'var(--teal)':'var(--coral)'})}
+let tkX=0;function tickerMove(dt){const tr=$('#tickTrack');const w=tr.scrollWidth/2;if(!w)return;tkX-=dt*.045;if(-tkX>=w)tkX+=w;tr.style.transform=`translate3d(${tkX.toFixed(1)}px,0,0)`}
+
+/* ============ alerts / outliner / CEO ============ */
+function renderAlerts(){
+ const a=[];const empty=Object.keys(DEPTS).filter(k=>!S.co.depts[k].head);
+ if(empty.length)a.push(['info',empty.length,`Empty seat${empty.length>1?'s':''}: ${empty.map(k=>DEPTS[k].n).slice(0,2).join(', ')}${empty.length>2?'…':''}`,'company']);
+ const unhappy=heads().filter(h=>h.opinion<-20);if(unhappy.length)a.push(['',unhappy.length,'Unhappy executive'+(unhappy.length>1?'s':''),'company']);
+ if(S.co.morale<35)a.push(['','!','Morale is low','morale']);
+ if(S.co.cash<0)a.push(['','$','In debt: 1.5% monthly interest','company']);
+ $('#alerts').innerHTML=a.map(x=>`<button class="alert ${x[0]}" data-act="nav" data-v="${x[3]}"><i>${x[1]}</i>${x[2]}</button>`).join('');
+ $('#nav').querySelectorAll('.dot').forEach(d=>d.remove());
+ if(empty.length&&S.cands.length)$('#nav_recruit')?.insertAdjacentHTML('beforeend','<i class="dot"></i>');
+ if(S.co.morale<35)$('#nav_morale')?.insertAdjacentHTML('beforeend','<i class="dot"></i>');
+}
+function renderCEO(){const c=ceo();$('#ceoBadge').dataset.id=c.id;$('#ceoBadge').innerHTML=portrait(c,96,'breathe')+`<div class="nm">${esc(c.name)}</div>`}
+function renderOutliner(){
+ const ol=$('#outliner');let h=`<div class="ol-h"><span class="lbl">Executive Council</span><span class="small num">${heads().length}/7</span></div>`;
+ Object.keys(DEPTS).forEach(k=>{const id=S.co.depts[k].head;const c=id&&S.chars[id];h+=c?`<div class="ol-row" data-act="char" data-id="${c.id}"><div class="mini">${avatar(c,{mood:moodOf(c),bg:shade(DEPTS[k].col)})}</div><div class="grow"><div>${esc(c.name)}</div><div class="small">${DEPTS[k].n}</div></div><span class="num ${c.opinion>=0?'good':'bad'}">${c.opinion>0?'+':''}${Math.round(c.opinion)}</span></div>`:`<div class="ol-row" data-act="appoint" data-v="${k}"><div class="mini" style="display:grid;place-items:center;color:var(--brass);border-style:dashed">+</div><div class="grow"><div class="small">Vacant</div><div class="small">${DEPTS[k].n}</div></div></div>`});
+ const held=S.stocks.filter(s=>s.own>0);if(held.length){h+=`<div class="ol-h"><span class="lbl">Portfolio</span><span class="small num">${fmt$(portfolioValue())}</span></div>`;held.forEach(s=>{const g=s.price/s.cost-1;h+=`<div class="ol-row" data-act="stock" data-id="${s.t}"><span class="num" style="color:var(--brass);width:40px">${s.t}</span><span class="grow num">${fmt$(s.own*s.price)}</span><span class="num ${g>=0?'good':'bad'}">${fmtPct(g)}</span></div>`})}
+ const subs=S.smalls.filter(s=>s.owner==='you');h+=`<div class="ol-h"><span class="lbl">Subsidiaries</span><span class="small num">${subs.length}</span></div>`;
+ subs.slice(0,6).forEach(s=>h+=`<div class="ol-row" data-act="small" data-id="${s.id}"><span style="width:8px;height:8px;transform:rotate(45deg);background:${S.co.color};flex:none"></span><span class="grow">${esc(s.name)}</span><span class="num small">${fmt$(s.rev*s.margin)}</span></div>`);
+ if(!subs.length)h+=`<div class="small" style="padding:2px 4px">None yet. Open Acquire to buy one.</div>`;
+ h+=`<div class="ol-h"><span class="lbl">Rivals</span></div>`;S.rivals.forEach(r=>h+=`<div class="ol-row" data-act="nav" data-v="rivals"><span style="width:10px;height:10px;border-radius:50%;background:${r.color};flex:none"></span><span class="grow">${esc(r.short)}</span><span class="num small">${fmt$(rivalVal(r))}</span></div>`);
+ ol.innerHTML=h;
+}
+
+/* ============ panels ============ */
+const PANELS={company:'Your Company',recruit:'Recruitment',market:'Stock Exchange',acquire:'Acquisitions',morale:'Happiness & Morale',rivals:'Rivals & the Throne',decisions:'Decisions'};
+function openPanel(k,toggle){if(UI.panel===k){if(toggle)closePanel();else renderPanel(false);return}UI.panel=k;document.querySelectorAll('.navb').forEach(b=>b.classList.toggle('on',b.dataset.v===k));$('#panelTitle').textContent=PANELS[k];$('#panel').classList.add('open');const b=$('#panelBody');b.classList.remove('swap');void b.offsetWidth;b.classList.add('swap');b.scrollTop=0;renderPanel()}
+function closePanel(){UI.panel=null;$('#panel').classList.remove('open');document.querySelectorAll('.navb').forEach(b=>b.classList.remove('on'))}
+function renderPanel(keepScroll=true){if(!UI.panel)return;const b=$('#panelBody');const st=b.scrollTop;b.innerHTML=({company:pCompany,recruit:pRecruit,market:pMarket,acquire:pAcquire,morale:pMorale,rivals:pRivals,decisions:pDecisions})[UI.panel]();if(keepScroll)b.scrollTop=st;if(UI.panel==='market')bindMarket()}
+
+function pCompany(){
+ const e=S._e||econ();const sec=SECTORS[S.co.sector];
+ let h=`<div class="grid3"><div class="stat"><div class="lbl">Revenue/mo</div><div class="v">${fmt$(e.revenue)}</div></div><div class="stat"><div class="lbl">Expenses/mo</div><div class="v">${fmt$(e.opex)}</div></div><div class="stat"><div class="lbl">Profit/mo</div><div class="v ${e.profit>=0?'good':'bad'}">${sgn(e.profit)}</div></div></div>`;
+ h+=`<div class="chartbox">${lineChart(S.hist.slice(-36),{w:400,h:86,col:S.co.color,fmt:fmt$})}<div class="small" style="display:flex;justify-content:space-between"><span>Valuation, last ${Math.min(36,S.hist.length)} months</span><span>${sec.n} · HQ ${DM[S.co.hq].n}</span></div></div>`;
+ h+=`<div class="sec"><span class="lbl">Departments</span><span class="small">Staff cap ${staffCap()} each · office floor ${S.co.office}</span></div>`;
+ Object.keys(DEPTS).forEach(k=>{const d=S.co.depts[k],D=DEPTS[k];const c=d.head&&S.chars[d.head];const eff=e.E[k];
+  h+=`<div class="dept"><div class="seat">${c?`<div data-act="char" data-id="${c.id}">${portrait(c,54)}</div>`:`<button class="empty" style="width:54px" data-act="appoint" data-v="${k}" title="Appoint a head">+</button>`}</div>
+  <div style="min-width:0"><div class="drow"><span class="dname" style="color:${D.col}">${D.n}</span><div class="stepper"><button data-act="staff" data-v="${k}" data-d="-1" aria-label="Fire one">−</button><span class="num">${d.staff}/${staffCap()}</span><button data-act="staff" data-v="${k}" data-d="1" aria-label="Hire one">+</button></div></div>
+  <div class="small">${c?`Head: <b style="color:var(--fg)">${esc(c.name)}</b> · skill ${skillOf(c)}`:'<span class="warn">No head appointed</span>'}</div>
+  <div class="bar"><i style="width:${clamp(eff/14*100,2,100)}%;background:${D.col}"></i></div><div class="small">${D.eff} · output <span class="num">${eff.toFixed(1)}</span></div></div></div>`});
+ h+=`<div class="small" style="margin:2px 0 6px">Each new hire costs ${fmt$(HIRE_FEE)} up front and ${fmt$(STAFF_SAL*PAY[S.co.pay].m)}/mo.</div>`;
+ h+=`<div class="sec"><span class="lbl">Last month's ledger</span></div>`;
+ const L=S.co.lastPL;if(L){const row=(n,v)=>`<div class="brk"><span>${n}</span><span class="num ${v>=0?'good':'bad'}">${sgn(v)}</span></div>`;h+=row('Core business',L.core)+row('Subsidiaries',L.subs)+(L.ctrl?row('Controlled companies',L.ctrl):'')+row('Interest',L.interest)+row('Staff payroll',-L.staffCost)+row('Executive salaries',-L.headCost)+row('Office rent',-L.rent)+(L.perks?row('Perks',-L.perks):'')+row('Operations savings',L.save)+`<div class="brk" style="border:0;font-weight:600"><span>Net</span><span class="num ${L.profit>=0?'good':'bad'}">${sgn(L.profit)}</span></div>`}else h+=`<div class="small">Your first books close at month's end.</div>`;
+ return h}
+
+function pRecruit(){
+ let h=`<p class="p">Executives run departments. Skill drives output; traits shape mood and loyalty. A signing bonus of three months' salary is paid on hire.</p><div class="tabs"><button class="tab ${!UI.recFilter?'on':''}" data-act="recf" data-v="">All</button>${Object.keys(DEPTS).map(k=>`<button class="tab ${UI.recFilter===k?'on':''}" data-act="recf" data-v="${k}">${DEPTS[k].n.split(' ')[0]}</button>`).join('')}</div>`;
+ const list=S.cands.map(id=>S.chars[id]).filter(c=>c&&(!UI.recFilter||c.want===UI.recFilter));
+ list.forEach((c,i)=>{const seat=S.co.depts[c.want];const cur=seat.head&&S.chars[seat.head];
+  h+=`<div class="cand" style="animation-delay:${i*60}ms"><div data-act="char" data-id="${c.id}" style="cursor:pointer">${portrait(c,64)}</div><div style="min-width:0"><div class="drow"><span class="cname">${esc(c.name)}</span><span class="skill">${icon('quality','var(--brass)')}<span style="font-size:15px">${skillOf(c)}</span></span></div>
+  <div class="small">Age ${c.age} · wants <b style="color:${DEPTS[c.want].col}">${DEPTS[c.want].n}</b> · ${fmt$(c.salary)}/mo</div><div>${c.traits.map(t=>`<span class="trait ${TRAITS[t].c}" title="${TRAITS[t].d}">${TRAITS[t].n}</span>`).join('')}</div>
+  <div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap"><button class="btn sm" data-act="hire" data-id="${c.id}">${cur?'Replace '+esc(cur.name.split(' ')[0]):'Hire as head'} · ${fmt$(c.salary*3)}</button>${cur?`<span class="small" style="align-self:center">current skill ${skillOf(cur)}</span>`:''}</div></div></div>`});
+ if(!list.length)h+=`<div class="small" style="padding:10px 0">No candidates for this department right now. New résumés arrive every month, or pay a headhunter.</div>`;
+ h+=`<div class="sec"><span class="lbl">Headhunter</span></div><p class="p">Pay a Park Avenue search firm for a fresh shortlist of stronger candidates${UI.recFilter?' in '+DEPTS[UI.recFilter].n:''}.</p><button class="btn ghost" data-act="headhunt">Commission search · ${fmt$(250000)}</button>`;
+ return h}
+
+function lineChart(arr,o){
+ const w=o.w,h=o.h;if(arr.length<2)return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto"></svg>`;
+ const mn=Math.min(...arr),mx=Math.max(...arr);const pad=(mx-mn)*.12||1;const lo=mn-pad,hi=mx+pad;
+ const X=i=>(i/(arr.length-1))*(w-46),Y=v=>h-6-((v-lo)/(hi-lo))*(h-14);
+ const pts=arr.map((v,i)=>X(i).toFixed(1)+' '+Y(v).toFixed(1));const id='lg'+(AVID++);
+ let g='';for(let i=0;i<4;i++){const v=lo+(hi-lo)*(i+.5)/4;const y=Y(v);g+=`<path d="M0 ${y.toFixed(1)}H${w-46}" stroke="#97a0c6" stroke-opacity=".1"/><text x="${w-42}" y="${(y+3).toFixed(1)}" font-size="9" fill="#97a0c6" font-family="IBM Plex Mono,monospace">${o.fmt(v)}</text>`}
+ let ex='';if(o.ref){const y=Y(o.ref);if(y>0&&y<h)ex=`<path d="M0 ${y.toFixed(1)}H${w-46}" stroke="#e6c07a" stroke-dasharray="3 3" stroke-opacity=".7"/><text x="4" y="${(y-3).toFixed(1)}" font-size="8.5" fill="#e6c07a" font-family="Josefin Sans,sans-serif" letter-spacing="1">YOUR AVG COST</text>`}
+ const last=arr.length-1;
+ return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block"><defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${o.col}" stop-opacity=".35"/><stop offset="1" stop-color="${o.col}" stop-opacity="0"/></linearGradient></defs>${g}<path d="M${pts.join('L')}L${X(last).toFixed(1)} ${h}L0 ${h}Z" fill="url(#${id})"/><path d="M${pts.join('L')}" fill="none" stroke="${o.col}" stroke-width="1.6" stroke-linejoin="round"/>${ex}<circle cx="${X(last).toFixed(1)}" cy="${Y(arr[last]).toFixed(1)}" r="3.2" fill="${o.col}" stroke="#0a0f22" stroke-width="1.2"/></svg>`}
+
+function pMarket(){
+ const s=S.stocks.find(x=>x.t===UI.stock)||S.stocks[0];
+ let h=`<div id="mkList">${mkList()}</div><div id="mkDetail">${mkDetail(s)}</div>`;
+ h+=`<div class="sec"><span class="lbl">Order</span><span class="small">fee <span class="num" id="mkFee">${(fee()*100).toFixed(2)}%</span></span></div>
+ <div class="qty" id="qchips">${[10,100,1000,10000,100000].map(q=>`<button data-act="qty" data-v="${q}" class="${UI.qty===q?'on':''}">${fmtN(q)}</button>`).join('')}<button data-act="qty" data-v="max">MAX</button></div>
+ <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input class="qin" id="qin" type="number" min="1" step="1" value="${UI.qty}" aria-label="Share quantity"><button class="btn teal" data-act="buy">Buy</button><button class="btn red" data-act="sell">Sell</button><span class="small num" id="mkCost"></span></div>
+ <p class="p" style="margin-top:10px">Large orders move the price. Own more than half of a company's shares and you can seize control: it joins your empire and paints its district.</p>`;
+ return h}
+function mkList(){return S.stocks.map(s=>{const ch=s.price/s.prev-1;return `<div class="stk ${s.t===UI.stock?'on':''}" data-act="stock" data-id="${s.t}"><span class="t">${s.t}</span><span class="n">${esc(s.n)}${s.ctrl?` <span style="color:${colorOf(s.ctrl)}">●</span>`:''}</span>${spark(s.hist.slice(-30),ch>=0)}<span class="p">${s.price.toFixed(2)}</span><span class="c ${ch>=0?'good':'bad'}">${fmtPct(ch)}</span></div>`}).join('')}
+function spark(a,up){const mn=Math.min(...a),mx=Math.max(...a)||1;const p=a.map((v,i)=>(i/(a.length-1)*70).toFixed(1)+' '+(16-((v-mn)/((mx-mn)||1))*14).toFixed(1)).join('L');return `<svg viewBox="0 0 70 18" style="width:70px;height:18px"><path d="M${p}" fill="none" stroke="${up?'#45d6c1':'#ff7b6b'}" stroke-width="1.2"/></svg>`}
+function mkDetail(s){
+ const pct=s.own/s.shares;const g=s.own?s.price/s.cost-1:0;
+ return `<div class="chartbox"><div class="drow" style="margin-bottom:4px"><div><span class="num" style="color:var(--brass);font-weight:600">${s.t}</span> <span style="font-family:var(--f-display);font-weight:700;font-size:15px">${esc(s.n)}</span></div><span class="small">${SECTORS[s.sector].n} · ${DM[s.d].s}</span></div>${lineChart(s.hist,{w:400,h:120,col:s.price>=s.hist[0]?'#45d6c1':'#ff7b6b',fmt:v=>'$'+v.toFixed(v<20?2:0),ref:s.own?s.cost:null})}</div>
+ <div class="grid3"><div class="stat"><div class="lbl">Price</div><div class="v">$${s.price.toFixed(2)}</div></div><div class="stat"><div class="lbl">Market cap</div><div class="v">${fmt$(s.price*s.shares)}</div></div><div class="stat"><div class="lbl">Your stake</div><div class="v">${(pct*100).toFixed(1)}%</div></div></div>
+ ${s.own?`<div class="small" style="margin-top:6px">You hold <span class="num">${fmtN(s.own)}</span> shares worth <span class="num">${fmt$(s.own*s.price)}</span> · <span class="${g>=0?'good':'bad'}">${fmtPct(g)}</span></div>`:''}
+ <div class="bar" style="height:7px;margin-top:8px;position:relative"><i style="width:${Math.min(100,pct*100)}%;background:${S.co.color}"></i></div><div class="small" style="display:flex;justify-content:space-between"><span>Stake</span><span>50% = control</span></div>
+ ${s.ctrl==='you'?`<div class="small good" style="margin-top:6px">Controlled by you. Pays ${fmt$(s.price*s.shares*.006)}/mo into your books.</div>`:pct>.5?`<button class="btn" style="margin-top:8px" data-act="seize">Seize control of ${esc(s.n)}</button>`:''}`}
+function bindMarket(){const q=$('#qin');if(!q)return;q.addEventListener('input',()=>{UI.qty=Math.max(1,Math.floor(+q.value||1));updCost()});q.addEventListener('pointerdown',e=>e.stopPropagation());updCost()}
+function updCost(){const s=S.stocks.find(x=>x.t===UI.stock);const c=$('#mkCost');if(c&&s)c.textContent='≈ '+fmt$(UI.qty*s.price*(1+fee()))}
+function refreshMarket(){if(UI.panel!=='market')return;const l=$('#mkList'),d=$('#mkDetail');if(l)l.innerHTML=mkList();const s=S.stocks.find(x=>x.t===UI.stock);if(d&&s)d.innerHTML=mkDetail(s);updCost();const f=$('#mkFee');if(f)f.textContent=(fee()*100).toFixed(2)+'%'}
+
+function acqChance(s,pct){const E=econ().E;const hostile=s.owner&&s.owner!=='you';let p=(hostile?.12:.36)+(pct-1)*1.5+E.legal*.022+E.fin*.012+(cst('neg')-8)*.018+(hostile?(cst('cun')-8)*.02:0);if(S.mods.some(m=>m.acq))p+=.1;return clamp(p,.05,.96)}
+function askPrice(s){return s.owner&&s.owner!=='you'?s.price*1.6:s.price}
+function pAcquire(){
+ const f=UI.acqFilter;const list=S.smalls.filter(s=>f==='avail'?!s.owner:f==='mine'?s.owner==='you':f==='rival'?(s.owner&&s.owner!=='you'):true).sort((a,b)=>f==='avail'?a.price-b.price:0);
+ let h=`<p class="p">Buy smaller New York businesses. Each adds monthly profit and influence over its district; same-sector buys earn 15% more. Rival-owned firms can be taken by hostile bid.</p><div class="tabs">${[['avail','Independent'],['mine','Yours'],['rival','Rival-owned']].map(([k,l])=>`<button class="tab ${f===k?'on':''}" data-act="acqf" data-v="${k}">${l} · ${S.smalls.filter(s=>k==='avail'?!s.owner:k==='mine'?s.owner==='you':(s.owner&&s.owner!=='you')).length}</button>`).join('')}</div>`;
+ list.forEach(s=>{const col=s.owner?colorOf(s.owner):'#d6dcf5';const p=askPrice(s);const cool=s.cool>monthIdx();
+  h+=`<div class="co" data-act="small" data-id="${s.id}"><span class="sw" style="background:${col}"></span><div style="min-width:0"><div class="cn">${esc(s.name)}</div><div class="small">${SECTORS[s.sector].n}${s.sector===S.co.sector?' <span class="good">· synergy</span>':''} · ${DM[s.d].s} · profit <span class="num">${fmt$(s.rev*s.margin)}</span>/mo${s.owner&&s.owner!=='you'?' · <span style="color:'+col+'">'+esc(nameOf(s.owner))+'</span>':''}</div></div>
+  <div style="text-align:right">${s.owner==='you'?`<button class="btn sm ghost" data-act="sellsub" data-id="${s.id}">Sell ${fmt$(s.price*.9)}</button>`:`<button class="btn sm ${s.owner?'red':''}" data-act="offer" data-id="${s.id}" ${cool?'disabled':''}>${cool?'Cooling off':(s.owner?'Hostile bid':'Offer')} </button><div class="small num" style="margin-top:3px">${fmt$(p)}</div>`}</div></div>`});
+ if(!list.length)h+=`<div class="small" style="padding:10px 0">Nothing here yet.</div>`;
+ return h}
+
+function pMorale(){
+ const m=S.co.morale,t=moraleTarget();const A=Math.PI*54;const off=A*(1-m/100);const col=m>65?'#45d6c1':m>40?'#e6c07a':'#ff7b6b';
+ let h=`<div class="gauge"><svg viewBox="0 0 132 80"><path d="M12 72A54 54 0 0 1 120 72" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10" stroke-linecap="round"/><path class="arc" d="M12 72A54 54 0 0 1 120 72" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${A.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/><text x="66" y="66" text-anchor="middle" font-family="Bodoni Moda,serif" font-weight="700" font-size="28" fill="#ece8f6">${Math.round(m)}</text></svg>
+ <div><div class="lbl">Company morale</div><div style="font-family:var(--f-display);font-size:18px;margin:2px 0">${m>75?'Electric':m>60?'Upbeat':m>45?'Steady':m>30?'Restless':'Mutinous'}</div><div class="small">Heading toward <b class="num" style="color:var(--fg)">${Math.round(t)}</b>. Output ×${moraleMult().toFixed(2)}.</div></div></div>`;
+ h+=`<div class="crowd">${Array.from({length:Math.min(80,headcount())},(_,i)=>{const r2=rng(i*31+7)();const mm=m+(r2-.5)*40;return `<i style="background:${mm>62?'#45d6c1':mm>40?'#e6c07a':'#ff7b6b'};animation-delay:${(r2*2.4).toFixed(2)}s"></i>`}).join('')}</div>`;
+ h+=`<div class="sec"><span class="lbl">Why they feel this way</span></div>`;
+ moraleParts().forEach(([n,v])=>h+=`<div class="brk"><span>${esc(n)}</span><span class="num ${v>=0?'good':'bad'}">${v>0?'+':''}${v.toFixed(1)}</span></div>`);
+ h+=`<div class="sec"><span class="lbl">Pay level</span></div><div class="seg">${Object.entries(PAY).map(([k,p])=>`<button class="${S.co.pay===k?'on':''}" data-act="pay" data-v="${k}">${p.n}<br><span class="num" style="font-size:10px">×${p.m}</span></button>`).join('')}</div>`;
+ h+=`<div class="sec"><span class="lbl">Perks</span><span class="small">monthly</span></div>`;
+ const e=S._e||econ();
+ Object.entries(PERKS).forEach(([k,p])=>{const cost=p.pct?e.core*p.pct:perkCost(k);h+=`<div class="perk ${S.co.perks[k]?'on':''}" data-act="perk" data-v="${k}" role="switch" aria-checked="${!!S.co.perks[k]}" tabindex="0"><div><div style="font-weight:600">${p.n} <span class="good small">+${p.mor}</span></div><div class="small">${p.d} · <span class="num">${fmt$(cost)}</span>/mo</div></div><span class="toggle"></span></div>`});
+ h+=`<div class="sec"><span class="lbl">Morale boosters</span></div>`;
+ ONEOFF.forEach(o=>{const cd=(S.cds[o.k]||-99)>monthIdx();h+=`<div class="perk"><div><div style="font-weight:600">${o.n} <span class="good small">+${o.mor}</span></div><div class="small">${o.d} · <span class="num">${fmt$(o.cost())}</span>${cd?` · <span class="warn">ready in ${S.cds[o.k]-monthIdx()} mo</span>`:''}</div></div><button class="btn sm" data-act="oneoff" data-v="${o.k}" ${cd?'disabled':''}>Go</button></div>`});
+ return h}
+const ONEOFF=[
+ {k:'party',n:'Rooftop Party',mor:10,months:2,cd:3,d:'Open bar above 34th Street',cost:()=>40000+3000*headcount()},
+ {k:'townhall',n:'Bagel Town Hall',mor:4,months:1,cd:2,d:'Free bagels and an honest Q&A',cost:()=>3000+60*headcount()},
+ {k:'bonus',n:'Surprise Bonus Round',mor:12,months:3,cd:6,op:15,d:'One month of payroll, paid out',cost:()=>staffTotal()*STAFF_SAL*PAY[S.co.pay].m+heads().reduce((a,c)=>a+c.salary,0)},
+ {k:'hamptons',n:'Hamptons Retreat',mor:18,months:4,cd:12,op:10,d:'A long weekend out east for everyone',cost:()=>150000+12000*headcount()}
+];
+
+function pRivals(){
+ const all=[{n:S.co.name,c:S.co.color,v:S._val||valuation(),you:1},...S.rivals.map(r=>({n:r.short,c:r.color,v:rivalVal(r)}))].sort((a,b)=>b.v-a.v);const mx=all[0].v;
+ let h=`<div class="sec"><span class="lbl">Path to the throne</span></div>`;
+ const goal=(n,cur,tgt,f)=>`<div style="margin-bottom:8px"><div class="drow small"><span style="color:var(--fg)">${n}</span><span class="num">${f(cur)} / ${f(tgt)}</span></div><div class="bar" style="height:7px"><i style="width:${clamp(cur/tgt*100,1,100)}%;background:linear-gradient(90deg,var(--brass2),var(--brass))"></i></div></div>`;
+ h+=goal('Empire of New York: control districts',myDistricts(),14,v=>Math.round(v))+goal('Titan of Wall Street: valuation',S._val||valuation(),2.5e9,fmt$);
+ h+=`<div class="sec"><span class="lbl">League table</span></div>`;
+ all.forEach(a=>h+=`<div class="lead"><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;${a.you?'color:var(--brass);font-weight:600':''}">${esc(a.n)}</span><div class="bar" style="height:12px;margin:0"><i class="b" style="width:${(a.v/mx*100).toFixed(1)}%;background:${a.c}"></i></div><span class="num" style="text-align:right">${fmt$(a.v)}</span></div>`);
+ h+=`<div class="sec"><span class="lbl">The other families</span></div>`;
+ S.rivals.forEach(r=>{const c=S.chars[r.ceo];const nd=DIST.filter(d=>owners[d.id]===r.id).length;h+=`<div class="rival" style="border-left-color:${r.color}"><div data-act="char" data-id="${c.id}" style="cursor:pointer">${portrait(c,60)}</div><div style="min-width:0"><div class="cname">${esc(r.name)}</div><div class="small">${esc(c.name)}, ${c.age} · ${SECTORS[r.sector].n} · HQ ${DM[r.hq].s}</div><div>${c.traits.map(t=>`<span class="trait ${TRAITS[t].c}">${TRAITS[t].n}</span>`).join('')}</div><div class="small" style="margin-top:5px">${nd} districts · ${S.smalls.filter(s=>s.owner===r.id).length} subsidiaries · opinion of you <span class="num ${c.opinion>=0?'good':'bad'}">${c.opinion>0?'+':''}${Math.round(c.opinion)}</span></div></div></div>`});
+ return h}
+
+const DECISIONS=[
+ {k:'office',n:'Lease another floor',d:()=>`Raise every department's staff cap from ${staffCap()} to ${staffCap()+4}. Rent rises.`,cost:()=>1.5e6*S.co.office,can:()=>S.co.office<8,go(){S.co.office++;toast(`New floor leased. Department cap is now ${staffCap()}.`,'good')}},
+ {k:'adblitz',n:'Times Square ad blitz',d:()=>'Billboards over Broadway. +12 reputation now, +2 a month for 3 months.',cost:()=>900000,cd:4,go(){S.co.rep=clamp(S.co.rep+12,0,100);addMod('Times Square buzz',{rep:2,left:3});toast('Your name is forty feet tall in Times Square.','good')}},
+ {k:'sprint',n:'Crunch product sprint',d:()=>'+12 product quality, but morale −8 for 2 months.',cost:()=>500000,cd:3,go(){S.co.quality=clamp(S.co.quality+12,0,100);addMod('Crunch hangover',{mor:-8,left:2});toast('Shipped. Everyone needs a nap.','good')}},
+ {k:'mayor',n:'Lunch with the Mayor',d:()=>'+10% acquisition odds for 6 months, +4 reputation.',cost:()=>600000,cd:8,go(){addMod('City Hall friendship',{acq:1,left:6});S.co.rep=clamp(S.co.rep+4,0,100);toast('City Hall now returns your calls.','good')}},
+ {k:'gala',n:'Host a charity gala',d:()=>'+8 reputation, executives +8 opinion, rivals take notice.',cost:()=>1.2e6,cd:6,go(){S.co.rep=clamp(S.co.rep+8,0,100);heads().forEach(h=>h.opinion+=8);S.rivals.forEach(r=>S.chars[r.ceo].opinion+=4);toast('The gala was the talk of the Upper East Side.','good')}},
+ {k:'relocate',n:'Move headquarters',d:()=>`Relocate HQ from ${DM[S.co.hq].n}. Rent depends on the district.`,cost:()=>3e6,go(){relocateModal()},noPay:1},
+ {k:'ipo',n:'Ring the opening bell (IPO)',d:()=>'Go public: raise 15% of your valuation in cash, +10 reputation. Requires a $250M valuation.',cost:()=>0,can:()=>!S.co.ipo&&(S._val||0)>=2.5e8,go(){const v=S._val;S.co.ipo=true;S.co.cash+=v*.15;S.co.rep=clamp(S.co.rep+10,0,100);toast(`IPO priced. ${fmt$(v*.15)} raised on the Exchange floor.`,'good');addMod('IPO euphoria',{mor:8,left:3})}}
+];
+function pDecisions(){
+ let h=`<p class="p">Strategic moves for the company. Each takes effect immediately.</p>`;
+ DECISIONS.forEach(d=>{const cost=d.cost();const cd=d.cd&&(S.cds['d_'+d.k]||-99)>monthIdx();const ok=(!d.can||d.can())&&!cd;
+  h+=`<div class="perk" style="grid-template-columns:1fr auto"><div><div style="font-family:var(--f-display);font-weight:700;font-size:15px">${d.n}</div><div class="small">${d.d()}</div>${cd?`<div class="small warn">Available in ${S.cds['d_'+d.k]-monthIdx()} months</div>`:''}</div><button class="btn sm" data-act="decide" data-v="${d.k}" ${ok&&(S.co.cash>=cost||d.noPay)?'':'disabled'}>${cost?fmt$(cost):'Enact'}</button></div>`});
+ return h}
+
+/* ============ district card ============ */
+function selectDistrict(id){UI.sel=id;document.querySelectorAll('.dist').forEach(p=>p.classList.toggle('sel',p.dataset.d===id));const c=$('#dcard');if(!id){c.classList.remove('open');return}
+ const d=DM[id];const inf=influence(id);const o=owners[id];
+ let h=`<div class="lbl">${BOROUGHS[d.b].n}</div><h3>${d.n}</h3><div class="small">Controlled by <b style="color:${o?colorOf(o):'var(--muted)'}">${o?esc(nameOf(o)):'no one'}</b> · rent ×${d.rent}</div><div class="sec" style="margin-top:10px"><span class="lbl">Influence</span></div>`;
+ const tot=Object.values(inf).reduce((a,b)=>a+b,0)||1;h+=`<div style="display:flex;height:8px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,.07)">${Object.entries(inf).map(([k,v])=>`<i style="width:${v/tot*100}%;background:${colorOf(k)}"></i>`).join('')}</div>`;
+ const sm=S.smalls.filter(s=>s.d===id),st=S.stocks.filter(s=>s.d===id);
+ h+=`<div class="sec"><span class="lbl">Businesses</span></div>`;
+ sm.forEach(s=>h+=`<div class="ol-row" data-act="small" data-id="${s.id}"><span style="width:8px;height:8px;transform:rotate(45deg);background:${s.owner?colorOf(s.owner):'#d6dcf5'};flex:none"></span><span class="grow">${esc(s.name)}</span><span class="num small">${fmt$(askPrice(s))}</span></div>`);
+ st.forEach(s=>h+=`<div class="ol-row" data-act="stock" data-id="${s.t}"><span class="num" style="color:var(--brass);width:40px">${s.t}</span><span class="grow">${esc(s.n)}</span><span class="num small">$${s.price.toFixed(2)}</span></div>`);
+ if(S.co.hq===id)h+=`<div class="small good" style="margin-top:6px">Your headquarters.</div>`;
+ c.innerHTML=h;c.classList.add('open');
+}
+
+/* ============ modals ============ */
+function openModal(html,{pause=true}={}){const m=$('#modal');m.innerHTML=html;m.hidden=false;if(pause&&!G.modal){G.prevSpeed=S.speed;S.speed=0;updateTop()}G.modal=true}
+function closeModal(){const m=$('#modal');m.hidden=true;m.innerHTML='';if(G.modal){G.modal=false;S.speed=G.prevSpeed;updateTop()}G.opts=null}
+function sceneArt(seed,tint){const r=rng(seed);let b='';let x=0;while(x<150){const w=8+r()*16,h=20+r()*70;b+=`<rect x="${x.toFixed(0)}" y="${(150-h).toFixed(0)}" width="${w.toFixed(0)}" height="${h.toFixed(0)}" fill="#0a0f22"/>`;for(let wy=150-h+5;wy<146;wy+=6)for(let wx=x+2;wx<x+w-2;wx+=4)if(r()<.3)b+=`<rect x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="1.6" height="2" fill="#ffd98a" opacity="${(.4+r()*.5).toFixed(2)}"/>`;x+=w+1}return `<svg viewBox="0 0 150 150" style="position:absolute;inset:0;width:100%;height:100%"><defs><linearGradient id="sk${seed}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d1430"/><stop offset="1" stop-color="${tint}"/></linearGradient></defs><rect width="150" height="150" fill="url(#sk${seed})"/>${b}</svg>`}
+function showEvent(ev){
+ G.opts=ev.opts;
+ const art=ev.who?`<div style="position:relative;border-radius:4px;overflow:hidden;aspect-ratio:3/4;max-width:100%">${sceneArt(ev.seed||7,ev.tint||'#3a2a5a')}<div style="position:absolute;left:12%;right:12%;bottom:0">${portrait(ev.who,999,'breathe').replace('width:999px','width:100%')}</div></div>${ev.who2?`<div style="width:56px;margin:-46px 0 0 auto;position:relative">${portrait(ev.who2,56)}</div>`:''}`:`<div style="position:relative;border-radius:4px;overflow:hidden;aspect-ratio:3/4">${sceneArt(ev.seed||3,ev.tint||'#5a3a5c')}</div>`;
+ openModal(`<div class="ev deco" role="dialog" aria-label="${esc(ev.title)}"><div class="ev-title">${esc(ev.title)}</div><div class="ev-body"><div class="ev-art">${art}</div><div class="ev-text">${ev.text}</div></div><div class="ev-opts">${ev.opts.map((o,i)=>`<button class="opt" data-act="opt" data-v="${i}" ${o.dis?'disabled':''}><b>${o.l}</b><span>${o.t}</span></button>`).join('')}</div></div>`);
+}
+function info(title,text,who,btn='Understood'){showEvent({title,text,who,opts:[{l:btn,t:'',go(){}}]})}
+
+function charWindow(c){
+ const isCeo=c.id===S.ceo;const rv=S.rivals.find(r=>r.ceo===c.id);const isCand=S.cands.includes(c.id);
+ let stats='';
+ if(isCeo){const ed=EDU[c.edu],pe=PERS[c.pers];stats=`<div class="grid3" style="grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0">${Object.entries(CSTATS).map(([k,n])=>`<div class="stat" style="padding:6px;text-align:center"><div class="lbl" style="font-size:8.5px">${n}</div><div class="v">${c.st[k]}</div></div>`).join('')}</div><div><span class="trait pos">${ed.n}</span><span class="trait">${pe.n}</span></div>`}
+ else stats=`<div class="small" style="margin:4px 0">${c.dept?'Head of '+DEPTS[c.dept].n:rv?'CEO of '+esc(rv.name):isCand?'Candidate for '+DEPTS[c.want].n:''}</div><div class="grid3" style="margin:6px 0"><div class="stat"><div class="lbl">Skill</div><div class="v">${skillOf(c)}</div></div><div class="stat"><div class="lbl">Salary</div><div class="v">${rv?'—':fmt$(c.salary)}</div></div><div class="stat"><div class="lbl">Opinion</div><div class="v ${c.opinion>=0?'good':'bad'}">${c.opinion>0?'+':''}${Math.round(c.opinion)}</div></div></div><div>${c.traits.map(t=>`<div class="small" style="margin-top:3px"><span class="trait ${TRAITS[t].c}">${TRAITS[t].n}</span> ${TRAITS[t].d}</div>`).join('')}</div>`;
+ const can=(c.praised??-9)+2<=monthIdx();
+ const acts=c.dept?`<button class="btn sm" data-act="praise" data-id="${c.id}" ${can?'':'disabled'}>Praise publicly${can?'':' (soon)'}</button><button class="btn sm ghost" data-act="raise" data-id="${c.id}">Raise +15% · ${fmt$(c.salary*.15)}/mo</button><button class="btn sm red" data-act="fire" data-id="${c.id}">Dismiss · ${fmt$(c.salary*2)}</button>`:'';
+ openModal(`<div class="ev deco" style="width:min(560px,100%)"><div class="ev-title">${esc(c.name)}</div><div class="ev-body" style="grid-template-columns:140px 1fr"><div>${portrait(c,140,'breathe')}</div><div><div class="lbl">Age ${c.age}${isCeo?' · Founder & CEO':''}</div>${stats}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">${acts}<button class="btn sm ghost" data-act="mclose">Close</button></div></div></div></div>`);
+}
+function offerModal(s){
+ UI.offer={id:s.id,pct:1};const draw=()=>{const p=askPrice(s)*UI.offer.pct;const ch=acqChance(s,UI.offer.pct);const box=$('#offerBox');if(!box)return;box.innerHTML=`<div class="grid3"><div class="stat"><div class="lbl">Your offer</div><div class="v">${fmt$(p)}</div></div><div class="stat"><div class="lbl">Success</div><div class="v ${ch>.6?'good':ch<.35?'bad':'warn'}">${Math.round(ch*100)}%</div></div><div class="stat"><div class="lbl">Profit/mo</div><div class="v">${fmt$(s.rev*s.margin*(s.sector===S.co.sector?1.15:1))}</div></div></div><div class="small" style="margin-top:6px">Payback ≈ ${Math.round(p/(s.rev*s.margin*(s.sector===S.co.sector?1.15:1)))} months. A failed bid costs 5% in advisory fees.</div>`;$('#offerGo').disabled=S.co.cash<p};
+ const hostile=s.owner&&s.owner!=='you';const owner=hostile?S.chars[S.rivals.find(r=>r.id===s.owner).ceo]:null;
+ openModal(`<div class="ev deco" style="width:min(560px,100%)"><div class="ev-title">${hostile?'Hostile Bid':'Acquisition Offer'}: ${esc(s.name)}</div><div class="ev-body" style="grid-template-columns:${owner?'110px ':''}1fr">${owner?`<div>${portrait(owner,110)}<div class="small" style="text-align:center;margin-top:4px">${esc(owner.name)}</div></div>`:''}<div><div class="small">${SECTORS[s.sector].n} · ${DM[s.d].n} · revenue ${fmt$(s.rev)}/mo · margin ${(s.margin*100).toFixed(0)}%</div><p class="p">${hostile?`${esc(nameOf(s.owner))} will fight this. Legal strength and your cunning improve the odds.`:'The founders will hear you out. Legal and Finance strength and your negotiation improve the odds.'}</p><label class="lbl" for="offerSl">Offer vs. asking (${fmt$(askPrice(s))})</label><input class="slider" id="offerSl" type="range" min="70" max="160" value="100"><div id="offerBox"></div></div></div><div class="ev-opts" style="flex-direction:row;justify-content:flex-end"><button class="btn ghost" data-act="mclose">Walk away</button><button class="btn" id="offerGo" data-act="offergo">Submit offer</button></div></div>`);
+ const sl=$('#offerSl');sl.addEventListener('input',()=>{UI.offer.pct=sl.value/100;draw()});sl.addEventListener('pointerdown',e=>e.stopPropagation());draw();
+}
+function doOffer(){const s=S.smalls.find(x=>x.id===UI.offer.id);const p=askPrice(s)*UI.offer.pct;const ch=acqChance(s,UI.offer.pct);closeModal();
+ if(S.co.cash<p)return toast('Not enough cash for that offer.','bad');
+ const prev=s.owner;
+ if(R()<ch){S.co.cash-=p;s.owner='you';s.price=smallPrice(s);S.co.rep=clamp(S.co.rep+2,0,100);if(prev){const rv=S.rivals.find(r=>r.id===prev);rv.cash+=p*.8;S.chars[rv.ceo].opinion-=25}
+  fxArc(S.co.hq,s.d,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts();renderAlerts()},900);toast(`<b>${esc(s.name)}</b> is yours for ${fmt$(p)}.`,'good');flyTo(DM[s.d].c[0],DM[s.d].c[1],Math.min(VT.w,560))}
+ else{S.co.cash-=p*.05;s.cool=monthIdx()+2;if(!prev)s.price=Math.round(s.price*1.1);else S.chars[S.rivals.find(r=>r.id===prev).ceo].opinion-=10;toast(`${esc(s.name)} rejected your ${prev?'bid':'offer'}. ${fmt$(p*.05)} lost in fees.`,'bad')}
+ refreshAll()}
+function relocateModal(){const opts=DIST.filter(d=>d.id!==S.co.hq&&!S.rivals.some(r=>r.hq===d.id)).sort((a,b)=>b.rent-a.rent);
+ openModal(`<div class="ev deco" style="width:min(560px,100%)"><div class="ev-title">Move Headquarters</div><div class="ev-body" style="grid-template-columns:1fr"><p class="p">Moving costs ${fmt$(3e6)}. Your HQ gives 4 influence in its district. Current rent: ${fmt$(60000*S.co.office*DM[S.co.hq].rent)}/mo.</p><div style="max-height:46vh;overflow:auto">${opts.map(d=>`<div class="co" data-act="reloc" data-id="${d.id}"><span class="sw" style="background:${owners[d.id]?colorOf(owners[d.id]):'#3a4780'}"></span><div><div class="cn">${d.n}</div><div class="small">${BOROUGHS[d.b].n} · rent ${fmt$(60000*S.co.office*d.rent)}/mo</div></div><span class="btn sm">Move</span></div>`).join('')}</div></div><div class="ev-opts"><button class="btn ghost" data-act="mclose">Stay put</button></div></div>`)}
+
+/* ============ events ============ */
+const chance=p=>Math.round(clamp(p,0,1)*100)+'%';
+const EVENTS=[
+ {id:'poach',w:3,cond:()=>heads().length>0,make(){const h=pick(heads());const rv=pick(S.rivals);const rc=S.chars[rv.ceo];const p=clamp(.25+h.opinion/100*.6+(cst('cha')-10)*.03+(h.traits.includes('loyal')?.25:0),.08,.92);
+  return{title:'A Lunch at Keens',who:h,who2:rc,seed:11,tint:'#5a2a3a',text:`<em>${esc(h.name)}</em>, your head of ${DEPTS[h.dept].n}, was seen at a Midtown steakhouse with ${esc(rc.name)}. By dessert there was an offer on the table: forty percent more to jump to ${esc(rv.name)}.`,
+  opts:[{l:'Match it. Nobody leaves.',t:`Salary +30% (${fmt$(h.salary*.3)}/mo) · opinion +20`,go(){h.salary=Math.round(h.salary*1.3);h.opinion+=20}},{l:'Appeal to their loyalty',t:`${chance(p)} they stay with +10 opinion; otherwise they leave`,go(){if(R()<p){h.opinion+=10;toast(`${esc(h.name)} turned ${rv.short} down.`,'good')}else loseHead(h,rv)}},{l:'Wish them luck',t:`Lose ${esc(h.name)}`,go(){loseHead(h,rv)}}]}}},
+ {id:'viral',w:2,cond:()=>true,make(){return{title:'Trending on Every Feed',seed:21,tint:'#2a4a6a',text:`A clip of your product went viral overnight. Eleven million views and counting. Your Marketing team is refreshing the numbers like a slot machine.`,opts:[{l:'Pour fuel on the fire',t:`Spend ${fmt$(400000)} · reputation +12`,dis:S.co.cash<4e5,go(){S.co.cash-=4e5;S.co.rep=clamp(S.co.rep+12,0,100)}},{l:'Enjoy it quietly',t:'Reputation +5',go(){S.co.rep=clamp(S.co.rep+5,0,100)}}]}}},
+ {id:'subway',w:2,cond:()=>true,make(){return{title:'The L Train Is Down',seed:31,tint:'#3a3a5a',text:`Signal failures have shut the line for a week. Half your staff commute from Brooklyn and Queens, and the group chat is furious.`,opts:[{l:'Charter shuttle buses',t:`Spend ${fmt$(200000)} · no morale loss`,dis:S.co.cash<2e5,go(){S.co.cash-=2e5}},{l:'Everyone works from home',t:'Morale +2, Sales output −10% this month',go(){S.co.morale+=2;S.co.cash-=(S._e?.core||0)*.1}},{l:'Tough it out',t:'Morale −6',go(){S.co.morale-=6}}]}}},
+ {id:'tip',w:2,cond:()=>true,make(){const s=pick(S.stocks.filter(x=>!x.ctrl));const p=.6;return{title:'A Tip at the Oyster Bar',seed:41,tint:'#2a3a5a',text:`A banker you barely know leans over at Grand Central: <em>"${s.n}. Big news Monday. You didn't hear it from me."</em> Then he's gone.`,opts:[{l:`Buy ${s.t} quietly`,t:`Spend ${fmt$(2e6)}. 60%: stock jumps 25%. 40%: regulators fine you ${fmt$(1.5e6)}, reputation −10`,dis:S.co.cash<2e6,go(){const q=Math.floor(2e6/s.price);S.co.cash-=q*s.price;s.cost=(s.cost*s.own+q*s.price)/(s.own+q);s.own+=q;if(R()<p){s.price*=1.25;s.mo+=.01;toast(`${s.t} soared. The tip was real.`,'good')}else{S.co.cash-=1.5e6;S.co.rep=clamp(S.co.rep-10,0,100);toast('Regulators came knocking. Fined and embarrassed.','bad')}}},{l:'Report the approach',t:'Reputation +4',go(){S.co.rep=clamp(S.co.rep+4,0,100)}},{l:'Forget you heard it',t:'Nothing happens',go(){}}]}}},
+ {id:'union',w:1.5,cond:()=>staffTotal()>=14,make(){const hr=S.co.depts.hr.head&&S.chars[S.co.depts.hr.head];const p=clamp(.3+deptEff('hr')*.05,.1,.9);return{title:'Union Cards Are Circulating',who:hr,seed:51,tint:'#5a3a2a',text:`Staff are organizing. They want better hours and a seat at the table. ${hr?esc(hr.name)+' thinks it can be handled.':'You have no head of People & Culture to manage it.'}`,opts:[{l:'Recognize the union',t:'Staff wages +5% for good · morale +12 now, +6 permanently · reputation +4',go(){S.co.union=true;addMod('Union contract',{mor:6,left:9999});S.co.morale+=12;S.co.rep=clamp(S.co.rep+4,0,100)}},{l:'Negotiate through HR',t:`${chance(p)}: morale +6. Otherwise morale −8`,go(){if(R()<p){S.co.morale+=6;toast('A fair deal was struck.','good')}else{S.co.morale-=8;toast('Talks broke down.','bad')}}},{l:'Fight it',t:'Morale −15, reputation −6',go(){S.co.morale-=15;S.co.rep=clamp(S.co.rep-6,0,100)}}]}}},
+ {id:'pitch',w:2,cond:()=>S.co.cash>1.5e6,make(){const nm=pick(PREF)+' '+pick(['AI','Labs','Health','Robotics','Studios']);return{title:'A Pitch in a Bushwick Loft',seed:61,tint:'#2a5a4a',text:`Two founders with more conviction than sleep want ${fmt$(1e6)} for their startup, <em>${nm}</em>. Their demo crashed twice, then did something genuinely remarkable.`,opts:[{l:'Write the check',t:`Spend ${fmt$(1e6)} · in 6 months, 35% chance it returns 6×`,go(){S.co.cash-=1e6;S.pending.push({at:monthIdx()+6,k:'startup',nm})}},{l:'Pass politely',t:'Nothing happens',go(){}}]}}},
+ {id:'ambition',w:2,cond:()=>heads().some(h=>h.traits.includes('ambitious')||h.opinion<0),make(){const h=pick(heads().filter(h=>h.traits.includes('ambitious')||h.opinion<0));return{title:'A Knock on Your Door',who:h,seed:71,tint:'#3a2a5a',text:`<em>${esc(h.name)}</em> closes the door behind them. "I've carried ${DEPTS[h.dept].n} for months. I want it recognized. A raise, or a title. Ideally both."`,opts:[{l:'Give the raise',t:`Salary +20% (${fmt$(h.salary*.2)}/mo) · opinion +25`,go(){h.salary=Math.round(h.salary*1.2);h.opinion+=25}},{l:'Make them Executive Vice President',t:'Free · opinion +12',go(){h.opinion+=12;h.title='EVP'}},{l:'Not this year',t:'Opinion −25',go(){h.opinion-=25}}]}}},
+ {id:'crash',w:1,cond:()=>monthIdx()>3,make(){return{title:'Black Tuesday on Broad Street',seed:81,tint:'#5a2a2a',text:`Panic selling swept the Exchange at the open. Every ticker is bleeding red, and cable news has wheeled out the word "contagion."`,opts:[{l:'Buy the dip',t:'Markets fall 15%. You keep your nerve.',go(){S.stocks.forEach(s=>{s.price*=.85;s.mo+=.003})}},{l:'Brace the company',t:'Markets fall 15% · morale −4, reputation +2',go(){S.stocks.forEach(s=>s.price*=.85);S.co.morale-=4;S.co.rep=clamp(S.co.rep+2,0,100)}}]}}},
+ {id:'met',w:1.5,cond:()=>true,make(){return{title:'An Invitation to the Met Gala',seed:91,tint:'#5a3a5c',text:`A heavy cream envelope arrives by courier. The theme this year is "Gilded Ambition." Everyone who matters will be on those steps.`,opts:[{l:'Attend in style',t:`Spend ${fmt$(150000)} · reputation +6, meet a star candidate`,dis:S.co.cash<15e4,go(){S.co.cash-=15e4;S.co.rep=clamp(S.co.rep+6,0,100);const c=newCand(null,6);S.cands.unshift(c.id);toast(`You met ${esc(c.name)} on the steps. They're on your Recruit list.`,'good')}},{l:'Send regrets',t:'Nothing happens',go(){}}]}}},
+ {id:'breach',w:1.5,cond:()=>monthIdx()>2,make(){const L=S.co.depts.legal.head&&S.chars[S.co.depts.legal.head];const shield=heads().some(h=>h.traits.includes('paranoid'));const p=clamp(.4+deptEff('legal')*.05+(cst('cun')-8)*.03+(shield?.2:0),.1,.95);return{title:'Customer Data Leaked',who:L,seed:101,tint:'#5a2a3a',text:`A security researcher emailed at 2 a.m.: customer records are sitting on an open server. ${L?esc(L.name)+' is already drafting statements.':'You have no Legal head to advise you.'}`,opts:[{l:'Disclose everything',t:'Reputation −5',go(){S.co.rep=clamp(S.co.rep-5,0,100)}},{l:'Fix it quietly',t:`${chance(p)} nobody notices. Otherwise fine ${fmt$(2e6)}, reputation −18`,go(){if(R()>p){S.co.cash-=2e6;S.co.rep=clamp(S.co.rep-18,0,100);toast('The cover-up made the front page.','bad')}else toast('Patched. Nobody noticed.','good')}}]}}},
+ {id:'foodtruck',w:1.5,cond:()=>true,make(){return{title:'The Halal Cart Is Leaving',seed:111,tint:'#5a4a2a',text:`Ahmed's cart has parked outside your building for nine years. Rent on the corner went up and he's heading to Jersey. Half the office is in mourning.`,opts:[{l:'Pay his corner permit',t:`Spend ${fmt$(60000)} · morale +6`,go(){S.co.cash-=6e4;S.co.morale+=6}},{l:'Hire him to cater',t:'Switches on the Catered Lunch perk · morale +3',go(){S.co.perks.lunch=true;S.co.morale+=3}},{l:'End of an era',t:'Morale −3',go(){S.co.morale-=3}}]}}},
+ {id:'heat',w:1.5,cond:()=>{const m=new Date(S.date).getUTCMonth();return m>=5&&m<=8},make(){return{title:'Heatwave, Broken AC',seed:121,tint:'#6a3a2a',text:`It's 97°F outside and the building's cooling just died. Someone has taped a thermometer to the CEO's door. It reads 88.`,opts:[{l:'Emergency repair',t:`Spend ${fmt$(350000)}`,dis:S.co.cash<35e4,go(){S.co.cash-=35e4}},{l:'Send everyone to the beach',t:`Spend ${fmt$(3e4+headcount()*1200)} · morale +6 · lose 8% of this month's core revenue`,go(){S.co.cash-=3e4+headcount()*1200+(S._e?.core||0)*.08;S.co.morale+=6}},{l:'Hand out fans',t:'Morale −5',go(){S.co.morale-=5}}]}}},
+ {id:'smear',w:1.5,cond:()=>monthIdx()>2,make(){const rv=pick(S.rivals);const rc=S.chars[rv.ceo];const pm=clamp(.35+deptEff('mkt')*.05,.1,.9),pl=clamp(.3+deptEff('legal')*.06,.1,.9);rc.opinion-=5;return{title:'Hit Piece in the Tabloids',who:rc,seed:131,tint:'#4a2a4a',text:`Page Six ran a story about your "toxic culture." Sources close to <em>${esc(rv.name)}</em> are quoted liberally. ${esc(rc.name)} sends flowers, with no card.`,opts:[{l:'Counter with a PR blitz',t:`Spend ${fmt$(300000)} · ${chance(pm)}: reputation +4, otherwise −4`,dis:S.co.cash<3e5,go(){S.co.cash-=3e5;S.co.rep=clamp(S.co.rep+(R()<pm?4:-4),0,100)}},{l:'Sue for defamation',t:`${chance(pl)}: win ${fmt$(1.5e6)} from ${rv.short}. Otherwise lose ${fmt$(500000)}`,go(){if(R()<pl){S.co.cash+=1.5e6;rv.cash-=1.5e6;toast(`You won. ${rv.short} paid up.`,'good')}else{S.co.cash-=5e5;toast('The judge was unimpressed.','bad')}}},{l:'Ignore it',t:'Reputation −7',go(){S.co.rep=clamp(S.co.rep-7,0,100)}}]}}},
+ {id:'intern',w:1.5,cond:()=>S.co.depts.eng.staff>0,make(){const c=newChar({age:22,skill:3,traits:['genius'],opinion:40});c.want='eng';return{title:'The Intern Has an Idea',who:c,seed:141,tint:'#2a4a5a',text:`<em>${esc(c.name)}</em>, a summer intern from Brooklyn Tech, rewrote your core system over a weekend "for fun." Engineering is equal parts thrilled and insulted.`,opts:[{l:'Ship it',t:'Quality +9',go(){S.co.quality=clamp(S.co.quality+9,0,100);delete S.chars[c.id]}},{l:'Offer a full-time role',t:'Quality +5 · they join the candidate list',go(){S.co.quality=clamp(S.co.quality+5,0,100);S.cands.unshift(c.id)}}]}}},
+ {id:'burnout',w:3,cond:()=>S.co.morale<38,make(){return{title:'Burnout Is Spreading',seed:151,tint:'#3a2a3a',text:`Sick days have doubled. Someone cried in the elevator. The anonymous survey reads like a ransom note.`,opts:[{l:'Mandatory week off',t:'Morale +12 · lose 15% of this month\'s core revenue',go(){S.co.morale+=12;S.co.cash-=(S._e?.core||0)*.15}},{l:'Push through',t:'Morale −5 · an executive may quit',go(){S.co.morale-=5;const h=heads();if(h.length&&R()<.35)loseHead(pick(h))}}]}}},
+ {id:'bid',w:2,cond:()=>S.smalls.filter(s=>s.owner==='you').length>=2,make(){const s=pick(S.smalls.filter(x=>x.owner==='you'));const rv=pick(S.rivals);const rc=S.chars[rv.ceo];const p=clamp(.45+deptEff('legal')*.05+(cst('cun')-8)*.03,.1,.95);return{title:`${rv.short} Wants ${s.name}`,who:rc,seed:161,tint:'#5a2a2a',text:`${esc(rc.name)} has launched a hostile bid for <em>${esc(s.name)}</em> in ${DM[s.d].n}, offering its managers ${fmt$(s.price*1.5)} and a corner office each.`,opts:[{l:'Defend it in court',t:`${chance(p)} you keep it. Legal fees ${fmt$(250000)}`,go(){S.co.cash-=25e4;if(R()<p)toast(`${esc(s.name)} stays yours.`,'good');else{s.owner=rv.id;fxArc(rv.hq,s.d,rv.color);setTimeout(()=>{renderMarkers();paintDistricts()},900);toast(`${rv.short} took ${esc(s.name)}.`,'bad')}}},{l:'Sell it to them',t:`Receive ${fmt$(s.price*1.5)}`,go(){S.co.cash+=s.price*1.5;s.owner=rv.id;rv.cash-=s.price*1.5;fxArc(rv.hq,s.d,rv.color);setTimeout(()=>{renderMarkers();paintDistricts()},900)}}]}}},
+ {id:'resign',w:4,cond:()=>heads().some(h=>h.opinion<-30),make(){const h=heads().find(h=>h.opinion<-30);return{title:'A Letter on Your Desk',who:h,seed:171,tint:'#2a2a3a',text:`<em>${esc(h.name)}</em> has written a short, polite, devastating resignation letter. Two weeks' notice, effective immediately.`,opts:[{l:'Beg them to stay',t:`Salary +40% (${fmt$(h.salary*.4)}/mo) · opinion +40`,go(){h.salary=Math.round(h.salary*1.4);h.opinion+=40}},{l:'Accept it',t:`Lose ${esc(h.name)}`,go(){loseHead(h)}}]}}},
+ {id:'mayor',w:1,cond:()=>S.co.rep>45,make(){return{title:'The Mayor Wants a Photo',seed:181,tint:'#2a3a6a',text:`City Hall wants to feature your company at a ribbon-cutting in ${DM[S.co.hq].n}. It's an election year, and everyone knows it.`,opts:[{l:'Smile for the cameras',t:'Reputation +7 · rivals −5 opinion of you',go(){S.co.rep=clamp(S.co.rep+7,0,100);S.rivals.forEach(r=>S.chars[r.ceo].opinion-=5)}},{l:'Stay out of politics',t:'Reputation +2',go(){S.co.rep=clamp(S.co.rep+2,0,100)}}]}}}
+];
+function rollEvent(){const ok=EVENTS.filter(e=>e.cond()&&(S.flags['ev_'+e.id]||-99)+3<=monthIdx());if(!ok.length)return;let tot=ok.reduce((a,e)=>a+e.w,0),r=R()*tot;for(const e of ok){r-=e.w;if(r<=0){S.flags['ev_'+e.id]=monthIdx();showEvent(e.make());return}}}
+function loseHead(h,rv){S.co.depts[h.dept].head=null;toast(`${esc(h.name)} left ${rv?'for '+esc(rv.name):'the company'}.`,'bad');if(rv)rv.base*=1.01;delete S.chars[h.id];S.co.morale-=3;refreshAll()}
+
+/* ============ simulation ============ */
+function dayTick(){
+ const prevM=new Date(S.date).getUTCMonth();S.date+=864e5;const d=new Date(S.date);
+ // market
+ S.mkt=S.mkt*.9+gauss()*.0015;const mk=gauss()*.006+S.mkt;const sh={};for(const k in SECTORS)sh[k]=gauss()*.006;
+ S.stocks.forEach(s=>{s.prev=s.price;const r=s.drift/252+s.vol/15.9*gauss()+mk*s.beta+sh[s.sector]+s.mo;s.mo*=.85;s.price=Math.max(.5,s.price*Math.exp(r));s.hist.push(s.price);if(s.hist.length>150)s.hist.shift()});
+ if(R()<1/25){const s=pick(S.stocks);const up=R()<.55;const m=(.05+R()*.09)*(up?1:-1);s.price*=1+m;s.mo+=m*.05;toast(`<b class="num">${s.t}</b> ${up?'beats':'misses'} earnings: ${fmtPct(m)}`,up?'good':'bad')}
+ if(d.getUTCMonth()!==prevM)monthTick();
+ updateTop();updTicker();refreshMarket();
+}
+function monthTick(){
+ const mi=monthIdx();const e=econ();
+ S.co.cash+=e.profit;
+ S.co.lastPL={core:e.core,subs:e.subs,ctrl:e.ctrl,interest:e.interest,staffCost:e.staffCost,headCost:e.headCost,rent:e.rent,perks:e.perks,save:(e.staffCost+e.headCost+e.rent+e.perks)*e.opsSave,profit:e.profit};
+ // quality / rep / morale
+ const vis=heads().filter(h=>h.traits.includes('visionary')).length;
+ S.co.quality=clamp(S.co.quality+e.E.eng*.42+(cst('vis')-8)*.06+vis*.6-S.co.quality*.035,0,100);
+ const net=heads().filter(h=>h.traits.includes('networker')).length;
+ S.co.rep=clamp(S.co.rep+e.E.mkt*.35+net*.6-(S.co.rep-30)*.045+S.mods.reduce((a,m)=>a+(m.rep||0),0),0,100);
+ S.co.morale=clamp(S.co.morale+(moraleTarget()-S.co.morale)*.35,0,100);
+ // executives
+ heads().forEach(h=>{let d=(S.co.morale-50)*.06+(h.salary/askSalary(h)-1)*12;h.traits.forEach(t=>d+=TRAITS[t].op||0);if(S.co.perks.equity)d+=1;h.opinion=clamp(h.opinion+d,-100,100)});
+ // birthdays
+ if(new Date(S.date).getUTCMonth()===0)Object.values(S.chars).forEach(c=>c.age++);
+ // mods decay
+ S.mods.forEach(m=>m.left--);S.mods=S.mods.filter(m=>m.left>0);
+ // subsidiaries drift
+ S.smalls.forEach(s=>{s.rev*=1+(gauss()*.02+.004);s.price=smallPrice(s)});
+ // candidates
+ const drop=S.cands.splice(0,2);drop.forEach(id=>delete S.chars[id]);while(S.cands.length<6)S.cands.push(newCand().id);
+ // rivals
+ S.rivals.forEach(r=>{r.base*=1+.004+gauss()*.012;r.cash+=r.base*.004;S.chars[r.ceo].opinion=clamp(S.chars[r.ceo].opinion*.96,-100,100);
+  if(R()<r.aggr){const t=S.smalls.filter(s=>!s.owner&&s.price<r.cash).sort((a,b)=>dist(a.d,r.hq)-dist(b.d,r.hq))[Math.floor(R()*3)];if(t){r.cash-=t.price;t.owner=r.id;fxArc(r.hq,t.d,r.color);setTimeout(()=>{renderMarkers();paintDistricts()},900);toast(`<span style="color:${r.color}">${esc(r.short)}</span> acquired ${esc(t.name)} in ${DM[t.d].s}.`)}}});
+ // pending
+ S.pending=S.pending.filter(p=>{if(p.at>mi)return true;if(p.k==='startup'){if(R()<.35){S.co.cash+=6e6;info('The Bet Paid Off',`<em>${esc(p.nm)}</em> just closed a huge round. Your ${fmt$(1e6)} stake is now worth ${fmt$(6e6)}, paid out in cash.`)}else toast(`${esc(p.nm)} quietly shut down. The ${fmt$(1e6)} is gone.`,'bad')}return false});
+ S.hist.push(valuation());if(S.hist.length>120)S.hist.shift();
+ const mname=MONTHS[(new Date(S.date).getUTCMonth()+11)%12];
+ toast(`${mname} books closed: <b class="num ${e.profit>=0?'good':'bad'}">${sgn(e.profit)}</b>`,e.profit>=0?'good':'bad');
+ refreshAll();
+ checkEnd();
+ if(!G.modal&&R()<.5)rollEvent();
+ save();
+}
+function checkEnd(){
+ if(S.co.cash<-12e6&&!S.won.bust){S.won.bust=1;showEvent({title:'Chapter 11',seed:5,tint:'#5a2a2a',text:`The banks have called in the loans. ${esc(S.co.name)} files for bankruptcy protection in the Southern District of New York. Every empire has a final chapter.`,opts:[{l:'Start a new dynasty',t:'Return to the title screen',go(){wipe();location.reload()}},{l:'Fight on with an emergency loan',t:`Cash set to ${fmt$(2e6)} · reputation −25`,go(){S.co.cash=2e6;S.co.rep=clamp(S.co.rep-25,0,100);S.won.bust=0}}]});return}
+ if(!S.won.emp&&myDistricts()>=14){S.won.emp=1;showEvent({title:'Empire of New York',who:ceo(),seed:9,tint:'#6a5a2a',text:`Fourteen districts fly your colors. From the Battery to the Bronx, nothing is built, sold or signed without ${esc(S.co.name)} hearing about it first.`,opts:[{l:'Keep building',t:'Continue playing',go(){}}]})}
+ if(!S.won.titan&&(S._val||0)>=2.5e9){S.won.titan=1;showEvent({title:'Titan of Wall Street',who:ceo(),seed:8,tint:'#6a5a2a',text:`${esc(S.co.name)} is worth ${fmt$(S._val)}. The Exchange floor goes quiet when your name scrolls past.`,opts:[{l:'Keep building',t:'Continue playing',go(){}}]})}
+}
+function refreshAll(){updateTop();renderAlerts();renderOutliner();renderCEO();if(UI.panel)renderPanel();if(UI.sel)selectDistrict(UI.sel)}
+
+/* ============ save ============ */
+const SAVE='md_save_v1';
+function save(){try{localStorage.setItem(SAVE,JSON.stringify(S))}catch(e){}}
+function load(){try{const t=localStorage.getItem(SAVE);return t?JSON.parse(t):null}catch(e){return null}}
+function wipe(){try{localStorage.removeItem(SAVE)}catch(e){}}
+
+/* ============ actions ============ */
+const ACT={
+ nav:el=>openPanel(el.dataset.v,el.classList.contains('navb')),
+ close:()=>closePanel(),
+ speed:el=>{if(G.modal)return;S.speed=+el.dataset.v;updateTop()},
+ rot:()=>cycleRot(),
+ oltoggle:()=>{UI.ol=!UI.ol;$('#outliner').classList.toggle('force',UI.ol)},
+ staff:el=>{const k=el.dataset.v,dd=+el.dataset.d,d=S.co.depts[k];if(dd>0){if(d.staff>=staffCap())return toast(`${DEPTS[k].n} is full. Lease another floor under Decisions.`,'bad');if(S.co.cash<HIRE_FEE)return toast('Not enough cash to hire.','bad');S.co.cash-=HIRE_FEE;d.staff++}else{if(d.staff<=0)return;d.staff--;S.co.cash-=STAFF_SAL;S.co.morale-=.6}refreshAll()},
+ appoint:el=>{closeModal();UI.recFilter=el.dataset.v;openPanel('recruit')},
+ recf:el=>{UI.recFilter=el.dataset.v||null;renderPanel(false)},
+ hire:el=>{const c=S.chars[el.dataset.id];const k=c.want;const cost=c.salary*3;if(S.co.cash<cost)return toast('Not enough cash for the signing bonus.','bad');const cur=S.co.depts[k].head&&S.chars[S.co.depts[k].head];
+  const doIt=()=>{if(cur){S.co.cash-=cur.salary*2;delete S.chars[cur.id];S.co.morale-=2}S.co.cash-=cost;c.dept=k;S.co.depts[k].head=c.id;S.cands=S.cands.filter(x=>x!==c.id);c.opinion+=10;toast(`${esc(c.name)} now runs ${DEPTS[k].n}.`,'good');refreshAll()};
+  if(cur){showEvent({title:'Replace an Executive?',who:cur,text:`Hiring <em>${esc(c.name)}</em> (skill ${skillOf(c)}) means letting go of ${esc(cur.name)} (skill ${skillOf(cur)}). Severance is two months' salary, and staff will notice.`,opts:[{l:'Make the change',t:`Severance ${fmt$(cur.salary*2)} + signing ${fmt$(cost)} · morale −2`,go:doIt},{l:'Keep the current team',t:'Nothing happens',go(){}}]})}else doIt()},
+ headhunt:()=>{if(S.co.cash<25e4)return toast('Not enough cash.','bad');S.co.cash-=25e4;const drop=S.cands.splice(0);drop.forEach(id=>delete S.chars[id]);for(let i=0;i<6;i++)S.cands.push(newCand(UI.recFilter||null,4).id);toast('The search firm sent a sharper shortlist.','good');refreshAll()},
+ char:el=>{const c=S.chars[el.dataset.id];if(c)charWindow(c)},
+ praise:el=>{const c=S.chars[el.dataset.id];c.praised=monthIdx();c.opinion+=8+(cst('cha')-10)*.5;closeModal();toast(`${esc(c.name)} beamed at the all-hands.`,'good');refreshAll()},
+ raise:el=>{const c=S.chars[el.dataset.id];c.salary=Math.round(c.salary*1.15);c.opinion+=14;closeModal();toast(`${esc(c.name)}'s salary is now ${fmt$(c.salary)}/mo.`,'good');refreshAll()},
+ fire:el=>{const c=S.chars[el.dataset.id];closeModal();showEvent({title:'Dismiss '+c.name+'?',who:c,text:`Severance is two months' salary (${fmt$(c.salary*2)}). The seat will be empty until you hire someone.`,opts:[{l:'Dismiss',t:'Morale −3',go(){S.co.cash-=c.salary*2;S.co.depts[c.dept].head=null;delete S.chars[c.id];S.co.morale-=3;refreshAll()}},{l:'Keep them',t:'Nothing happens',go(){}}]})},
+ mclose:()=>closeModal(),
+ opt:el=>{const o=G.opts&&G.opts[+el.dataset.v];closeModal();if(o)o.go();refreshAll()},
+ stock:el=>{UI.stock=el.dataset.id;if(UI.panel!=='market')openPanel('market');else refreshMarket();const s=S.stocks.find(x=>x.t===UI.stock);document.querySelectorAll('.stk').forEach(r=>r.classList.toggle('on',r.dataset.id===UI.stock))},
+ stockmap:el=>{UI.stock=el.dataset.id;const s=S.stocks.find(x=>x.t===UI.stock);selectDistrict(s.d);openPanel('market')},
+ qty:el=>{const s=S.stocks.find(x=>x.t===UI.stock);let q=el.dataset.v==='max'?Math.max(1,Math.floor(Math.max(0,S.co.cash)/(s.price*(1+fee())))):+el.dataset.v;UI.qty=q;$('#qin').value=q;document.querySelectorAll('#qchips button').forEach(b=>b.classList.toggle('on',b===el));updCost()},
+ buy:()=>{const s=S.stocks.find(x=>x.t===UI.stock);let q=Math.floor(+$('#qin').value||0);q=Math.min(q,s.shares-s.own);if(q<=0)return;const cost=q*s.price*(1+fee());if(cost>S.co.cash)return toast('Not enough cash for that order.','bad');S.co.cash-=cost;s.cost=(s.cost*s.own+cost)/(s.own+q);s.own+=q;const imp=q/s.shares*.9;s.price*=1+imp;s.hist[s.hist.length-1]=s.price;toast(`Bought ${fmtN(q)} ${s.t} for ${fmt$(cost)}.`,'good');refreshAll()},
+ sell:()=>{const s=S.stocks.find(x=>x.t===UI.stock);let q=Math.min(Math.floor(+$('#qin').value||0),s.own);if(s.ctrl==='you')return toast('You control this company. Its shares are locked.','bad');if(q<=0)return toast('You hold no shares to sell.','bad');const imp=q/s.shares*.9;s.price*=1-imp;const got=q*s.price*(1-fee());S.co.cash+=got;s.own-=q;if(!s.own)s.cost=0;s.hist[s.hist.length-1]=s.price;toast(`Sold ${fmtN(q)} ${s.t} for ${fmt$(got)}.`,got>=q*s.cost?'good':'bad');refreshAll()},
+ seize:()=>{const s=S.stocks.find(x=>x.t===UI.stock);s.ctrl='you';S.co.rep=clamp(S.co.rep+6,0,100);fxArc(S.co.hq,s.d,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts()},900);showEvent({title:'Control Seized',who:ceo(),seed:13,tint:'#2a5a4a',text:`You walk into the boardroom of <em>${esc(s.n)}</em> as its new controlling shareholder. The old directors have already cleared their desks.`,opts:[{l:'Excellent',t:`+${fmt$(s.price*s.shares*.006)}/mo · district influence +3`,go(){}}]})},
+ small:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);if(!s)return;selectDistrict(s.d);flyTo(s.pos[0],s.pos[1],Math.min(VT.w,520));if(s.owner!=='you'){if(s.cool>monthIdx())return toast(`${esc(s.name)} won't take meetings for a while.`,'bad');offerModal(s)}else{UI.acqFilter='mine';openPanel('acquire')}},
+ offer:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);offerModal(s)},
+ offergo:()=>doOffer(),
+ sellsub:el=>{const s=S.smalls.find(x=>x.id===el.dataset.id);showEvent({title:'Sell '+s.name+'?',text:`A buyer will pay ${fmt$(s.price*.9)} today. The business returns to independent hands.`,opts:[{l:'Sell',t:`+${fmt$(s.price*.9)}`,go(){S.co.cash+=s.price*.9;s.owner=null;renderMarkers();paintDistricts()}},{l:'Keep it',t:'Nothing happens',go(){}}]})},
+ acqf:el=>{UI.acqFilter=el.dataset.v;renderPanel(false)},
+ dist:el=>{const d=DM[el.dataset.id];selectDistrict(d.id);flyTo(d.c[0],d.c[1],Math.min(VT.w,560))},
+ perk:el=>{const k=el.dataset.v;S.co.perks[k]=!S.co.perks[k];toast(`${PERKS[k].n} ${S.co.perks[k]?'switched on':'cancelled'}.`,S.co.perks[k]?'good':'');refreshAll()},
+ pay:el=>{S.co.pay=el.dataset.v;refreshAll()},
+ oneoff:el=>{const o=ONEOFF.find(x=>x.k===el.dataset.v);const c=o.cost();if(S.co.cash<c)return toast('Not enough cash.','bad');S.co.cash-=c;S.cds[o.k]=monthIdx()+o.cd;addMod(o.n,{mor:o.mor,left:o.months});S.co.morale=clamp(S.co.morale+o.mor*.6,0,100);if(o.op)heads().forEach(h=>h.opinion+=o.op);toast(`${o.n}! Morale is climbing.`,'good');confetti();refreshAll()},
+ decide:el=>{const d=DECISIONS.find(x=>x.k===el.dataset.v);const c=d.cost();if(!d.noPay){if(S.co.cash<c)return;S.co.cash-=c}if(d.cd)S.cds['d_'+d.k]=monthIdx()+d.cd;d.go();refreshAll();if(d.k==='office'||d.k==='ipo')renderMarkers()},
+ reloc:el=>{if(S.co.cash<3e6){closeModal();return toast('Moving costs '+fmt$(3e6)+'.','bad')}const from=S.co.hq;S.co.cash-=3e6;S.co.hq=el.dataset.id;closeModal();fxArc(from,S.co.hq,S.co.color);setTimeout(()=>{renderMarkers();paintDistricts()},900);toast(`Headquarters moved to ${DM[S.co.hq].n}.`,'good');refreshAll()}
+};
+function handleAct(el){const a=el.dataset.act;if(ACT[a])ACT[a](el);else if(SACT[a])SACT[a](el)}
+document.addEventListener('click',e=>{if(e.target.closest('#map'))return;const el=e.target.closest('[data-act]');if(el)handleAct(el)});
+document.addEventListener('keydown',e=>{if(!G.running||e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();if(G.modal)return;if(S.speed){G.prevSpeed=S.speed;S.speed=0}else S.speed=G.prevSpeed||1;updateTop()}else if(['Digit1','Digit2','Digit3'].includes(e.code)&&!G.modal){S.speed=+e.code.slice(5);updateTop()}else if(e.code==='Escape'){if(G.modal&&!G.opts)closeModal();else if(!G.modal)closePanel()}});
+$('#modal').addEventListener('pointerdown',e=>{if(e.target.id==='modal'&&!G.opts)closeModal()});
+
+function toast(html,kind=''){const t=document.createElement('div');t.className='toast '+kind;t.innerHTML=html;const box=$('#toasts');box.prepend(t);while(box.children.length>5)box.lastChild.remove();setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),550)},5200)}
+function confetti(){const c=S.co.color;const g=$('#gFx');const d=DM[S.co.hq].c;for(let i=0;i<18;i++){const a=Math.random()*6.28,r=10+Math.random()*26;const el=document.createElementNS(NS,'circle');el.setAttribute('r','1.6');el.setAttribute('fill',[c,'#fff','#45d6c1','#ff6fae'][i%4]);el.innerHTML=`<animate attributeName="cx" from="${d[0]}" to="${d[0]+Math.cos(a)*r}" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".2 .9 .25 1" keyTimes="0;1"/><animate attributeName="cy" from="${d[1]-10}" to="${d[1]-10+Math.sin(a)*r+12}" dur="1.2s" fill="freeze" calcMode="spline" keySplines=".2 .9 .25 1" keyTimes="0;1"/><animate attributeName="opacity" from="1" to="0" dur="1.4s" fill="freeze"/>`;g.appendChild(el);setTimeout(()=>el.remove(),1500)}}
+
+/* ============ start screen ============ */
+const SETUP={name:'',sector:'tech',color:'#e6c07a',hq:'chelsea',edu:'wharton',pers:'shrewd',fem:false,seed:Math.floor(Math.random()*1e9),ceoName:''};
+const PCOLORS=['#e6c07a','#4cc9f0','#ff9a52','#ff6fae'];
+function skylineSVG(){const r=rng(42);let b='',w='';let x=0;const H=1000;
+ const layer=(base,scale,col,lights)=>{let s='';let x=-20;while(x<1620){const bw=(26+r()*58)*scale,bh=(80+r()*320)*scale*(r()<.12?1.8:1);const y=base-bh;s+=`<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="${bw.toFixed(0)}" height="${(bh+40).toFixed(0)}" fill="${col}"/>`;if(r()<.25)s+=`<path d="M${x+bw*.2} ${y}L${x+bw/2} ${y-bh*.18}L${x+bw*.8} ${y}Z" fill="${col}"/><rect x="${(x+bw/2-1).toFixed(0)}" y="${(y-bh*.26).toFixed(0)}" width="2" height="${(bh*.1).toFixed(0)}" fill="${col}"/>`;
+  if(lights)for(let wy=y+10;wy<base-6;wy+=12*scale)for(let wx=x+5;wx<x+bw-6;wx+=9*scale)if(r()<.22)w+=`<rect class="win" x="${wx.toFixed(0)}" y="${wy.toFixed(0)}" width="${(4*scale).toFixed(1)}" height="${(5*scale).toFixed(1)}" fill="#ffd98a" style="animation-delay:${(r()*8).toFixed(2)}s;animation-duration:${(4+r()*8).toFixed(1)}s"/>`;x+=bw+2*scale}return s};
+ b+=layer(820,.9,'#1b1f45',false)+layer(900,1.15,'#12153a',true)+layer(1000,1.45,'#0a0d26',true);
+ return `<svg id="skyline" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMax slice" aria-hidden="true"><defs><radialGradient id="moon"><stop offset="0" stop-color="#fff4d6"/><stop offset=".25" stop-color="#ffe7b0" stop-opacity=".6"/><stop offset="1" stop-color="#ffe7b0" stop-opacity="0"/></radialGradient></defs><circle cx="1250" cy="220" r="160" fill="url(#moon)"/><circle cx="1250" cy="220" r="38" fill="#fff1cf"/>${Array.from({length:60},()=>`<circle cx="${(r()*1600).toFixed(0)}" cy="${(r()*500).toFixed(0)}" r="${(r()*1.3+.3).toFixed(1)}" fill="#fff" opacity="${(r()*.6+.2).toFixed(2)}"/>`).join('')}${b}${w}<rect y="960" width="1600" height="40" fill="#070a1c"/></svg><style>.win{animation:twk 6s ease-in-out infinite}@keyframes twk{0%,100%{opacity:.9}50%{opacity:.25}}</style>`}
+function renderStart(){
+ const saved=load();
+ const st=$('#start');
+ const cc={id:'x',fem:SETUP.fem,age:34,seed:SETUP.seed,traits:[],opinion:60};
+ if(!SETUP.name)SETUP.name=pick(PREF)+' '+pick(['Industries','Holdings','Group','& Co.','Enterprises']);
+ if(!SETUP.ceoName)SETUP.ceoName=(SETUP.fem?pick(FIRST_F):pick(FIRST_M))+' '+pick(LAST);
+ const words='Manhattan'.split('');
+ st.innerHTML=`${skylineSVG()}<div class="st-left"><h1 class="st-title"><span class="w" style="animation-delay:.05s">Manhattan</span> <span class="w" style="animation-delay:.25s">Dynasty</span></h1><div class="st-tag">Build a company · Rule five boroughs</div><p style="max-width:42ch;color:#c7cdf0;line-height:1.6;font-size:14px;margin-top:18px;animation:lett 1.2s .8s var(--ease) both">Hire a council of executives, keep your people happy, play the Exchange, and buy up the city one business at a time. Three old families stand in your way.</p></div>
+ <div class="st-right"><div class="setup deco" id="setup"></div></div>`;
+ renderSetup(saved);
+}
+function renderSetup(saved){
+ const cc={id:'x',fem:SETUP.fem,age:34,seed:SETUP.seed,traits:[],opinion:60,bg:SETUP.color};
+ $('#setup').innerHTML=`${saved?`<button class="btn teal" style="width:100%;margin-bottom:12px" data-act="continue">Continue ${esc(saved.co.name)} · ${(()=>{const d=new Date(saved.date);return MONTHS[d.getUTCMonth()]+' '+d.getUTCFullYear()})()}</button>`:''}
+ <div class="lbl" style="margin-bottom:8px;color:var(--brass)">Found your company</div>
+ <div class="row"><div><div data-act="reroll" title="New look" style="cursor:pointer">${portrait(cc,96,'breathe')}</div><button class="btn sm ghost" style="width:100%;margin-top:6px" data-act="reroll">New face</button><button class="btn sm ghost" style="width:100%;margin-top:4px" data-act="gender">${SETUP.fem?'Woman':'Man'}</button></div>
+ <div style="min-width:0"><div class="field"><label class="lbl" for="inCo">Company name</label><input id="inCo" type="text" maxlength="28" value="${esc(SETUP.name)}"></div><div class="field"><label class="lbl" for="inCeo">Founder</label><input id="inCeo" type="text" maxlength="28" value="${esc(SETUP.ceoName)}"></div>
+ <div class="field"><span class="lbl">Colors</span><div class="pills">${PCOLORS.map(c=>`<button class="sw ${SETUP.color===c?'on':''}" style="background:${c}" data-act="color" data-v="${c}" aria-label="Color ${c}"></button>`).join('')}</div></div></div></div>
+ <div class="field"><span class="lbl">Industry</span><div class="pills">${Object.entries(SECTORS).map(([k,s])=>`<button class="pill ${SETUP.sector===k?'on':''}" data-act="sector" data-v="${k}">${s.n}</button>`).join('')}</div><div class="small" style="margin-top:4px">${SECTORS[SETUP.sector].d}</div></div>
+ <div class="field"><span class="lbl">Education</span><div class="pills">${Object.entries(EDU).map(([k,s])=>`<button class="pill ${SETUP.edu===k?'on':''}" data-act="edu" data-v="${k}">${s.n}</button>`).join('')}</div></div>
+ <div class="field"><span class="lbl">Temperament</span><div class="pills">${Object.entries(PERS).map(([k,s])=>`<button class="pill ${SETUP.pers===k?'on':''}" data-act="pers" data-v="${k}">${s.n}</button>`).join('')}</div></div>
+ <div class="field"><label class="lbl" for="inHq">Headquarters</label><select id="inHq">${DIST.filter(d=>!['ues','fidi','wburg'].includes(d.id)).map(d=>`<option value="${d.id}" ${SETUP.hq===d.id?'selected':''}>${d.n} (${BOROUGHS[d.b].n}) · rent ×${d.rent}</option>`).join('')}</select></div>
+ <button class="btn" style="width:100%;padding:11px;font-size:12px" data-act="found">${saved?'Start a new dynasty':'Found the company'}</button>`;
+ const keep=()=>{SETUP.name=$('#inCo').value;SETUP.ceoName=$('#inCeo').value;SETUP.hq=$('#inHq').value};
+ ['inCo','inCeo','inHq'].forEach(id=>{$('#'+id).addEventListener('change',keep);$('#'+id).addEventListener('input',keep)});
+}
+const SACT={
+ reroll:()=>{SETUP.seed=Math.floor(Math.random()*1e9);renderSetup(load())},
+ gender:()=>{SETUP.fem=!SETUP.fem;SETUP.ceoName=(SETUP.fem?pick(FIRST_F):pick(FIRST_M))+' '+SETUP.ceoName.split(' ').slice(1).join(' ');renderSetup(load())},
+ color:el=>{SETUP.color=el.dataset.v;renderSetup(load())},
+ sector:el=>{SETUP.sector=el.dataset.v;renderSetup(load())},
+ edu:el=>{SETUP.edu=el.dataset.v;renderSetup(load())},
+ pers:el=>{SETUP.pers=el.dataset.v;renderSetup(load())},
+ found:()=>{SETUP.name=($('#inCo').value||'').trim()||'Hudson Holdings';SETUP.ceoName=($('#inCeo').value||'').trim()||'A. Founder';SETUP.hq=$('#inHq').value;newGame(SETUP);boot(true)},
+ continue:()=>{S=load();if(!S)return;boot(false)}
+};
+
+function boot(fresh){
+ try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('landscape').catch(()=>{})}catch(e){}
+ buildMap();buildTop();buildTicker();renderMarkers();paintDistricts();
+ $('#coName').textContent=S.co.name;$('#coSub').textContent=SECTORS[S.co.sector].n+' · '+DM[S.co.hq].n;$('#coMono').textContent=S.co.name[0];$('#coMono').style.background=S.co.color;
+ refreshAll();
+ for(const k in TW)TW[k].cur=TW[k].t;
+ $('#start').classList.add('gone');setTimeout(()=>{$('#start').hidden=true},950);
+ G.running=true;G.prevSpeed=1;
+ VB.x=150;VB.y=0;VB.w=980;fitVB();const hq=DM[S.co.hq].c;flyTo(hq[0]+60,hq[1]-10,640);
+ if(fresh){S.speed=0;setTimeout(()=>{fxPulse(S.co.hq,S.co.color);showEvent({title:'A New Name on the Directory',who:ceo(),seed:3,tint:'#3a3a6a',text:`<em>${esc(S.co.name)}</em> opens its doors in ${DM[S.co.hq].n} with ${fmt$(S.co.cash)} in the bank, eleven employees and one loyal co-founder running Engineering.<br><br>Fill your council with heads of department, keep morale high, trade on the Exchange and buy up the city's businesses. Control fourteen districts, or reach a ${fmt$(2.5e9)} valuation, to claim the throne.`,opts:[{l:'Open for business',t:'The clock starts. Space pauses; 1, 2, 3 set the speed.',go(){S.speed=1;G.prevSpeed=1;updateTop()}}]});G.prevSpeed=1},1100)}
+}
+
+/* ============ loop ============ */
+let last=performance.now();
+const DAYMS=[0,1000,420,150];
+function frame(now){const dt=Math.min(100,now-last);last=now;
+ if(G.running){if(!G.modal&&S.speed>0){G.dayAcc+=dt;const L=DAYMS[S.speed];let n=0;while(G.dayAcc>=L&&n<4){G.dayAcc-=L;dayTick();n++;if(G.modal){G.dayAcc=0;break}}$('#dprog').style.width=(G.dayAcc/L*100).toFixed(1)+'%'}
+  animMap(dt,now);tweenTick(dt);tickerMove(dt)}
+ requestAnimationFrame(frame)}
+applyOrientation();renderStart();requestAnimationFrame(frame);
+</script>
+
+</body>
+</html>
